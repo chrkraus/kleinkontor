@@ -103,6 +103,10 @@ Technik: Python, Flask, SQLAlchemy/SQLite, fpdf2 (PDF), drafthorse (ZUGFeRD), wa
 
 Beiträge sind willkommen – bitte vorher ein Issue eröffnen. Sicherheitslücken bitte vertraulich melden, siehe [SECURITY.md](SECURITY.md).
 
+## Änderungen
+
+Siehe [CHANGELOG.md](CHANGELOG.md).
+
 ## Lizenz
 
 [GNU Affero General Public License v3.0](LICENSE). Du darfst das Programm nutzen, verändern und weitergeben; wer eine veränderte Fassung anderen – auch nur über ein Netzwerk – zur Verfügung stellt, muss deren Quelltext unter derselben Lizenz offenlegen. Komponenten Dritter: [THIRD_PARTY.md](THIRD_PARTY.md).
