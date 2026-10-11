@@ -5,11 +5,9 @@ Web-App für Selbständige und Kleinunternehmer in Deutschland (Angebote, Rechnu
 Installationsspezifische Details (Server, Domains, NAS, Zugänge) gehören in eine lokale, nicht versionierte Datei (`*.local.md`).
 
 ## Arbeitsweise
-- Änderungen zuerst in einer **Testinstanz** (`instance.env` mit `BUCHHALTUNG_ENV=test`, eigener Ordner `<name>-test`), dort mit `./restart.sh` neu starten und testen; frische, entschärfte Daten holt `./testdaten_aktualisieren.sh`.
-- In die Produktion erst nach Freigabe mit `./deploy.sh` (Datensicherung, ff-only-Merge, Neustart, bei Fehler automatisch zurück); zurück mit `./rollback.sh`.
-- Im Produktiv-Ordner keine direkten Code-Änderungen. Nicht im git: `data/`, `instance.env`, `.venv/`, `bin/`, `Caddyfile`, `*.local.md`.
-- Neustart einer Instanz nur mit `./restart.sh` (über `data/app.pid`), nie per `pkill` – Test und Produktion heißen beide `waitress-serve`.
 - Vor jedem Commit: `.venv/bin/python -m pytest -q`.
+- Nicht im git: `data/`, `instance.env`, `.venv/`, `bin/`, `Caddyfile`, `*.local.md`.
+- Neustart einer Instanz mit `./restart.sh` (über `data/app.pid`), nicht per `pkill`.
 
 ## Testmodus (`environment.IS_TEST`)
 Mails gehen an `BUCHHALTUNG_TEST_MAIL` (`mailer.send`), Paperless-Uploads sind gesperrt (`PaperlessClient.upload`), kein Hintergrundplaner, PDF mit Wasserzeichen. Neue Funktionen mit Außenwirkung (Mail, Upload, externe APIs) **müssen** diese Sperre ebenfalls beachten.

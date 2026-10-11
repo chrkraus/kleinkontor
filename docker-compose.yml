@@ -1,7 +1,8 @@
 # Schnellstart: docker compose up -d  →  http://localhost:5000
 services:
   kleinkontor:
-    build: .
+    image: ghcr.io/chrkraus/kleinkontor:latest
+    # build: .              # stattdessen selbst bauen
     container_name: kleinkontor
     ports:
       - "5000:5000"
@@ -9,9 +10,6 @@ services:
       - ./data:/data          # Datenbank, Sicherungen, Logo – unbedingt mitsichern
     environment:
       TZ: Europe/Berlin
-      # Für eine Testinstanz (Mails nur an diese Adresse, keine Uploads):
-      # BUCHHALTUNG_ENV: test
-      # BUCHHALTUNG_TEST_MAIL: test@example.de
       # Reverse-Proxy im selben Docker-Netz, dessen Header übernommen werden sollen:
       # BUCHHALTUNG_TRUSTED_PROXIES: 172.18.0.2
     restart: unless-stopped

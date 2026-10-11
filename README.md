@@ -18,10 +18,11 @@
 - **Paperless-ngx-Anbindung:** Belege hochladen und verknüpfen, **Belegeingang** mit automatischer Erkennung von Betrag, Datum und Kategorie
 - **Benutzer mit Einzelrechten**, Zwei-Faktor-Anmeldung (TOTP), Einladungen und „Passwort vergessen“ per E-Mail
 - **Datensicherung** täglich mit Rotation; optional verschlüsselte Kopie auf ein NAS
-- **Testmodus** für eine zweite Instanz mit Datenkopie (E-Mails nur an dich, keine Uploads, Wasserzeichen)
 - Oberfläche auf Deutsch, Hell-/Dunkelmodus, für Handy und Desktop
 
 ## Schnellstart mit Docker
+
+Fertiges Image: `ghcr.io/chrkraus/kleinkontor` (für amd64 und arm64).
 
 ```bash
 git clone https://github.com/chrkraus/kleinkontor.git
@@ -29,7 +30,7 @@ cd kleinkontor
 docker compose up -d
 ```
 
-Dann <http://localhost:5000> öffnen. Beim ersten Aufruf legst du das **Admin-Konto** an, danach unter **Einstellungen** Firmendaten, Steuernummer und Bankverbindung. Alle Daten liegen im Ordner `./data` – diesen Ordner unbedingt sichern.
+Dann <http://localhost:5000> öffnen. **Auf einer Synology-NAS:** siehe [Anleitung für Synology](docs/synology.md). Beim ersten Aufruf legst du das **Admin-Konto** an, danach unter **Einstellungen** Firmendaten, Steuernummer und Bankverbindung. Alle Daten liegen im Ordner `./data` – diesen Ordner unbedingt sichern.
 
 ## Installation ohne Docker (Linux)
 
@@ -60,8 +61,6 @@ Fast alles stellst du in der App unter **Einstellungen** ein (Firma, Steuer, Num
 |---|---|---|
 | `HOST`, `PORT` | Adresse und Port | `127.0.0.1`, `5000` |
 | `BUCHHALTUNG_DATA` | Datenordner | `./data` |
-| `BUCHHALTUNG_ENV` | `test` für eine Testinstanz | produktiv |
-| `BUCHHALTUNG_TEST_MAIL` | Empfänger aller Mails im Testmodus | Absenderadresse |
 | `BUCHHALTUNG_TRUSTED_PROXIES` | weitere Proxy-Adressen, deren `X-Forwarded-*` übernommen werden | nur `127.0.0.1` |
 | `NAS_TARGET` | Ziel für `nas_sync.sh`, z. B. `rsync://backup@nas.local/backup/buchhaltung/` | aus |
 
@@ -78,16 +77,6 @@ Fast alles stellst du in der App unter **Einstellungen** ein (Firma, Steuer, Num
 - **Optional aufs NAS:** `nas_sync.sh` verschlüsselt die Sicherungen (AES-256, Kennwort in `data/backup-verschluesselung.key`) und spiegelt sie per rsync nach `NAS_TARGET` (Passwort in `data/nas-rsync.pass`); täglich per cron aufrufen. Entschlüsseln: `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in datei.zip.enc -out sicherung.zip`.
 - **Wiederherstellen:** App stoppen, `buchhaltung.db` aus der Sicherung nach `data/` kopieren, App starten.
 - Bewahre Rechnungen und Belege so lange auf, wie es die Aufbewahrungsfristen (§ 147 AO) verlangen; die App löscht nichts automatisch.
-
-## Test- und Produktivinstanz
-
-Für Änderungen ohne Risiko kann eine zweite Instanz im Nachbarordner `<name>-test` laufen (`instance.env` mit `BUCHHALTUNG_ENV=test`, eigener Port). Hilfsskripte:
-
-| Skript | Zweck |
-|---|---|
-| `testdaten_aktualisieren.sh` | (in der Testinstanz) entschärfte Kopie der produktiven Daten holen |
-| `deploy.sh` | (in der Produktion) getesteten Stand übernehmen: Datensicherung, Update, Neustart, bei Fehler automatisch zurück |
-| `rollback.sh` | (in der Produktion) zurück zur vorherigen Version |
 
 ## Paperless-ngx
 
