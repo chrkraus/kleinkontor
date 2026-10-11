@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Zahlungserinnerungen{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Überfällige Rechnungen</h1>
+  <a class="btn" href="{{ url_for('settings_view') }}#erinnerungen">Einstellungen</a>
+</div>
+<p class="muted">
+  {% if settings.reminder_auto %}
+    Automatische Erinnerungen sind <strong>an</strong>: {{ settings.reminder_days }} Tage nach Fälligkeit, danach alle {{ settings.reminder_interval_days }} Tage, höchstens {{ settings.reminder_max }}×.
+  {% else %}
+    Automatische Erinnerungen sind <strong>aus</strong> – du verschickst sie hier mit einem Klick selbst.
+  {% endif %}
+  Bitte vorher prüfen, ob die Zahlung nicht doch eingegangen ist (Rechnung dann als bezahlt markieren).
+</p>
+<div class="card">
+  {% if items %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Rechnung</th><th>Kunde</th><th>Fällig seit</th><th class="num">Betrag</th><th>Erinnerungen</th><th></th></tr></thead>
+    <tbody>
+    {% for d in items %}
+      <tr>
+        <td><a href="{{ url_for('document_view', did=d.id) }}">{{ d.number }}</a></td>
+        <td>{{ d.customer.display_name }}{% if not d.customer.email %} <span class="badge overdue" title="Für den Versand wird eine E-Mail-Adresse benötigt">keine E-Mail</span>{% endif %}</td>
+        <td>{{ d.due_date|date }} <span class="muted">({{ (today - d.due_date).days }} Tage)</span></td>
+        <td class="num">{{ d.gross|money }}</td>
+        <td>{% if d.reminder_count %}{{ d.reminder_count }}× · zuletzt {{ d.last_reminder_at.strftime('%d.%m.%Y') }}{% else %}<span class="muted">noch keine</span>{% endif %}
+          {% if due[d.id] %}<span class="badge invoiced">fällig</span>{% endif %}</td>
+        <td class="actions">
+          {% if can('documents_send') %}<a class="btn small primary" href="{{ url_for('document_send', did=d.id, art='erinnerung') }}">✉ Erinnerung</a>{% endif %}
+          <form method="post" action="{{ url_for('invoice_paid', did=d.id) }}" class="inline" data-confirm="Rechnung {{ d.number }} als heute bezahlt markieren?">
+            {% if can('documents_edit') %}<button class="small">Bezahlt</button>{% endif %}</form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<div class="empty">Keine überfälligen Rechnungen. 🎉</div>{% endif %}
+</div>
+{% endblock %}

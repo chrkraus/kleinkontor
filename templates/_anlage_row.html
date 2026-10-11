@@ -1,0 +1,7 @@
+<tr>
+  <td class="num">{{ r.line }}</td>
+  <td class="num">{{ r.kz }}</td>
+  <td>{{ r.label }}{% if r.hint %}<div class="hint">{{ r.hint }}</div>{% endif %}</td>
+  <td class="muted">{{ r.sources|join(", ") }}</td>
+  <td class="num"><button type="button" class="copy" data-v="{{ r.amount|money(false) }}" title="Betrag kopieren">{{ r.amount|money }}</button></td>
+</tr>

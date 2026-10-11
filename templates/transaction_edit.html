@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Buchung{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ "Buchung bearbeiten" if t.id else ("Neue Einnahme" if t.kind == "income" else "Neue Ausgabe") }}</h1>
+</div>
+<form method="post" enctype="multipart/form-data">
+<div class="grid grid-2">
+  <div class="card">
+    <div class="field">
+      <label>Art</label>
+      <div class="actions">
+        <label class="check"><input type="radio" name="kind" value="expense" {{ 'checked' if t.kind == 'expense' }} onchange="toggleKind()"> Ausgabe</label>
+        <label class="check"><input type="radio" name="kind" value="income" {{ 'checked' if t.kind == 'income' }} onchange="toggleKind()"> Einnahme</label>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Datum (Zahlung)</label><input type="date" name="date" value="{{ t.date.isoformat() }}" required></div>
+      <div class="field"><label>Betrag brutto (€)</label><input name="gross_amount" value="{{ t.gross_amount|money(false) if t.gross_amount else '' }}" inputmode="decimal" placeholder="0,00" required autofocus></div>
+      <div class="field"><label>Enthaltene USt</label>
+        <select name="vat_rate">{% for r in (0, 7, 19) %}<option value="{{ r }}" {{ 'selected' if (t.vat_rate or 0) == r }}>{{ r }} %</option>{% endfor %}</select>
+      </div>
+    </div>
+    {% if settings.small_business %}<div class="hint" style="margin-top:-8px;margin-bottom:12px">Als Kleinunternehmer hast du keinen Vorsteuerabzug – erfasse Ausgaben mit 0 % USt (der Bruttobetrag ist dann die Betriebsausgabe).</div>{% endif %}
+    <div class="field">
+      <label>Kategorie</label>
+      <select name="category" id="cat-expense">
+        {% for c in expense_categories %}<option {{ 'selected' if c == t.category }}>{{ c }}</option>{% endfor %}
+      </select>
+      <select name="category" id="cat-income">
+        {% for c in income_categories %}<option {{ 'selected' if c == t.category }}>{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Beschreibung</label><input name="description" value="{{ t.description or '' }}" placeholder="z. B. Druckerpatronen"></div>
+    <div class="form-row">
+      <div class="field"><label>Geschäftspartner</label><input name="counterparty" value="{{ t.counterparty or '' }}" placeholder="z. B. Amazon"></div>
+      <div class="field"><label>Zahlungsart</label>
+        <select name="payment_method">{% for p in ("Überweisung", "Lastschrift", "Karte", "Bar", "PayPal", "Sonstige") %}<option {{ 'selected' if p == t.payment_method }}>{{ p }}</option>{% endfor %}</select>
+      </div>
+    </div>
+    <div class="field"><label>Notizen</label><textarea name="notes">{{ t.notes or '' }}</textarea></div>
+    {% if t.document %}<p class="hint">Gehört zu <a href="{{ url_for('document_view', did=t.document.id) }}">{{ t.document.kind_label }} {{ t.document.number }}</a>.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Beleg (Paperless-ngx)</h2>
+    {% if not paperless_enabled %}
+      <p class="muted">Paperless ist noch nicht verbunden. Hinterlege URL und API-Token in den <a href="{{ url_for('settings_view') }}">Einstellungen</a>.</p>
+      <div class="field"><label>Paperless-Dokument-ID (optional)</label><input name="paperless_document_id" value="{{ t.paperless_document_id or '' }}" inputmode="numeric"></div>
+    {% else %}
+      {% if t.paperless_document_id %}
+        <p>Verknüpft mit Dokument <strong>#{{ t.paperless_document_id }}</strong> –
+          <a href="{{ url_for('paperless_document', pid=t.paperless_document_id) }}" target="_blank">anzeigen</a> ·
+          <a href="{{ url_for('paperless_link', pid=t.paperless_document_id) }}" target="_blank">in Paperless öffnen</a></p>
+      {% elif t.paperless_task_id %}
+        <p class="muted">Upload wird von Paperless noch verarbeitet …</p>
+      {% endif %}
+      <div class="field">
+        <label>Neuen Beleg hochladen (PDF, Bild)</label>
+        <input type="file" name="receipt" accept=".pdf,image/*">
+        <div class="hint">Wird mit Titel, Datum, Korrespondent und den Tags „Buchhaltung“ + „Ausgabe/Einnahme“ an Paperless übergeben.</div>
+      </div>
+      <div class="field">
+        <label>… oder vorhandenes Paperless-Dokument verknüpfen</label>
+        <div class="actions">
+          <input name="paperless_document_id" id="pl-id" value="{{ t.paperless_document_id or '' }}" inputmode="numeric" placeholder="Dokument-ID" style="width:140px">
+          <button type="button" onclick="openSearch()">In Paperless suchen …</button>
+        </div>
+      </div>
+      {% if t.paperless_document_id %}
+      <iframe class="pdf" style="height:420px" src="{{ url_for('paperless_document', pid=t.paperless_document_id) }}"></iframe>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+<div class="actions">
+  {% if can('bookkeeping_edit') %}<button type="submit" class="primary" name="action" value="save">Speichern</button>{% endif %}
+  {% if not t.id %}<button type="submit" name="action" value="new">Speichern &amp; nächste</button>{% endif %}
+  <a class="btn" href="{{ url_for('transactions', jahr=t.date.year) }}">Abbrechen</a>
+</div>
+</form>
+{% if t.id %}
+<form method="post" action="{{ url_for('transaction_delete', tid=t.id) }}" data-confirm="Buchung löschen?" style="margin-top:20px">
+  {% if can('bookkeeping_edit') %}<button class="danger small">Buchung löschen</button>{% endif %}
+</form>
+{% endif %}
+
+<dialog id="pl-dialog">
+  <h2>Paperless durchsuchen</h2>
+  <div class="actions"><input id="pl-q" placeholder="Suchbegriff, z. B. Händler oder Betrag" style="flex:1"><button type="button" onclick="search()">Suchen</button><button type="button" onclick="this.closest('dialog').close()">Schließen</button></div>
+  <div class="pl-results" id="pl-results"></div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleKind() {
+  const income = document.querySelector('input[name=kind]:checked').value === 'income';
+  const ci = document.getElementById('cat-income'), ce = document.getElementById('cat-expense');
+  ci.style.display = income ? '' : 'none'; ci.disabled = !income;
+  ce.style.display = income ? 'none' : ''; ce.disabled = income;
+}
+toggleKind();
+
+const dlg = document.getElementById('pl-dialog');
+function openSearch() {
+  const q = document.querySelector('[name=counterparty]').value || document.querySelector('[name=description]').value;
+  document.getElementById('pl-q').value = q;
+  dlg.showModal();
+  search();
+}
+async function search() {
+  const box = document.getElementById('pl-results');
+  box.textContent = 'Suche …';
+  const r = await fetch('{{ url_for("paperless_search") }}?q=' + encodeURIComponent(document.getElementById('pl-q').value));
+  const data = await r.json();
+  if (!r.ok) { box.textContent = data.error; return; }
+  box.innerHTML = '';
+  if (!data.length) box.textContent = 'Keine Dokumente gefunden.';
+  data.forEach(d => {
+    const div = document.createElement('div');
+    div.textContent = `#${d.id} · ${d.created} · ${d.title}`;
+    div.onclick = () => { document.getElementById('pl-id').value = d.id; dlg.close(); };
+    box.appendChild(div);
+  });
+}
+document.getElementById('pl-q')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name or "Neuer Eintrag" }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ p.name if p.id else ("Neues Produkt" if p.kind == "product" else "Neue Dienstleistung") }}</h1>
+</div>
+<form method="post">
+<div class="grid grid-2">
+  <div class="card">
+    <div class="field">
+      <label>Art</label>
+      <div class="actions">
+        {% for k, label in kinds.items() %}
+        <label class="check"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if p.kind == k }}> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="field"><label>Bezeichnung</label>
+      <input name="name" value="{{ p.name or '' }}" required autofocus placeholder="z. B. UniFi U7 Pro Access Point oder Montage IP-Kamera"></div>
+    <div class="form-row">
+      <div class="field"><label>Hersteller</label><input name="manufacturer" value="{{ p.manufacturer or '' }}" list="manufacturers" placeholder="z. B. Ubiquiti, Reolink"></div>
+      <div class="field"><label>Artikelnummer</label><input name="sku" value="{{ p.sku or '' }}" placeholder="z. B. U7-Pro"></div>
+    </div>
+    <datalist id="manufacturers"><option>Ubiquiti</option><option>Reolink</option><option>AVM</option><option>TP-Link</option><option>Netgear</option><option>MikroTik</option><option>Synology</option></datalist>
+    <div class="form-row">
+      <div class="field"><label>Kategorie</label><input name="category" value="{{ p.category or '' }}" list="categories" placeholder="z. B. Access Points"></div>
+      <div class="field"><label>Einheit</label><input name="unit" value="{{ p.unit or '' }}" list="units"></div>
+    </div>
+    <datalist id="categories">{% for c in categories %}<option>{{ c }}</option>{% endfor %}<option>Access Points</option><option>Kameras</option><option>Switches</option><option>Router &amp; Gateways</option><option>Zubehör</option><option>Installation</option><option>Arbeitszeit</option><option>Anfahrt</option></datalist>
+    <datalist id="units"><option>Stk.</option><option>Std.</option><option>pauschal</option><option>km</option><option>m</option><option>Monat(e)</option></datalist>
+    <div class="field"><label>Beschreibung auf Angebot/Rechnung (optional)</label>
+      <textarea name="description" placeholder="z. B. Wi-Fi 7, 2,5 GbE PoE+, inkl. Deckenhalterung">{{ p.description or '' }}</textarea>
+      <div class="hint">Erscheint als zweite Zeile unter der Bezeichnung.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Preise</h2>
+    <div class="form-row">
+      <div class="field"><label>Verkaufspreis {{ "(Endpreis)" if settings.small_business else "netto" }} (€)</label>
+        <input name="unit_price" id="vk" value="{{ p.unit_price|money(false) if p.unit_price else '' }}" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><label>USt-Satz</label>
+        <select name="vat_rate">{% for r in (19, 7, 0) %}<option value="{{ r }}" {{ 'selected' if p.vat_rate == r }}>{{ r }} %</option>{% endfor %}</select></div>
+    </div>
+    {% if settings.small_business %}<div class="hint" style="margin-top:-8px;margin-bottom:12px">Als Kleinunternehmer ist der Verkaufspreis dein Endpreis. Der USt-Satz wird erst bei Regelbesteuerung verwendet.</div>{% endif %}
+    <div class="field"><label>Einkaufspreis {{ "brutto" if settings.small_business else "netto" }} (€, optional)</label>
+      <input name="purchase_price" id="ek" value="{{ p.purchase_price|money(false) if p.purchase_price else '' }}" inputmode="decimal" placeholder="0,00">
+      <div class="hint" id="margin"></div></div>
+    <div class="field"><label>Interne Notizen (erscheinen nicht auf Dokumenten)</label>
+      <textarea name="notes" placeholder="z. B. Lieferant, Bestelllink, Einkaufsbedingungen">{{ p.notes or '' }}</textarea></div>
+    <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if p.active }}> aktiv (in der Positionsauswahl verfügbar)</label>
+  </div>
+</div>
+<div class="actions">
+  {% if can('catalog_edit') %}<button type="submit" class="primary" name="action" value="save">Speichern</button>{% endif %}
+  {% if not p.id %}<button type="submit" name="action" value="new">Speichern &amp; nächster</button>{% endif %}
+  <a class="btn" href="{{ url_for('products') }}">Abbrechen</a>
+</div>
+</form>
+
+{% if p.id %}
+<div class="card" style="margin-top:20px">
+  <h2>Verwendet in</h2>
+  {% if usage %}
+  <table>
+    <thead><tr><th>Dokument</th><th>Datum</th><th>Kunde</th><th>Status</th></tr></thead>
+    <tbody>{% for d in usage %}
+      <tr data-href="{{ url_for('document_view', did=d.id) }}"><td>{{ d.kind_label }} {{ d.display_number }}</td><td>{{ d.issue_date|date }}</td><td>{{ d.customer.display_name }}</td><td><span class="badge {{ d.status }}">{{ d.status_label }}</span></td></tr>
+    {% endfor %}</tbody>
+  </table>
+  {% else %}<p class="muted">Noch in keinem Angebot und keiner Rechnung verwendet.</p>{% endif %}
+  <form method="post" action="{{ url_for('product_delete', pid=p.id) }}" data-confirm="Eintrag löschen? Wird er bereits verwendet, wird er nur deaktiviert.">
+    {% if can('catalog_edit') %}<button class="danger small">Löschen</button>{% endif %}</form>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+function parseNum(v) { v = (v || '').trim().replace(/\s|€/g, ''); if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.'); const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function margin() {
+  const vk = parseNum(document.getElementById('vk').value), ek = parseNum(document.getElementById('ek').value);
+  const el = document.getElementById('margin');
+  if (!vk || !ek) { el.textContent = 'Mit Einkaufspreis wird die Marge angezeigt.'; return; }
+  const m = vk - ek;
+  el.textContent = `Marge: ${m.toLocaleString('de-DE', {style: 'currency', currency: 'EUR'})} je Einheit (${Math.round(m / vk * 100)} % vom Verkaufspreis, Aufschlag ${Math.round(m / ek * 100)} %)`;
+}
+document.getElementById('vk').addEventListener('input', margin);
+document.getElementById('ek').addEventListener('input', margin);
+margin();
+</script>
+{% endblock %}

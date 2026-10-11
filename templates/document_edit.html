@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% set label = "Angebot" if d.kind == "offer" else "Rechnung" %}
+{% block title %}{{ label }} bearbeiten{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ label }} {{ "bearbeiten" if d.id else "erstellen" }}</h1>
+</div>
+<form method="post" action="{{ url_for('document_save', did=d.id) if d.id else url_for('document_save') }}" id="docform">
+  <input type="hidden" name="kind" value="{{ d.kind }}">
+  <div class="card">
+    <div class="form-row">
+      <div class="field">
+        <label>Kunde</label>
+        <select name="customer_id" required>
+          <option value="">– bitte wählen –</option>
+          {% for c in customers %}<option value="{{ c.id }}" {{ 'selected' if c.id == d.customer_id }}>{{ c.display_name }}{% if c.city %} · {{ c.city }}{% endif %}</option>{% endfor %}
+        </select>
+        <div class="hint"><a href="{{ url_for('customer_edit', next='document', kind=d.kind) }}">+ neuen Kunden anlegen</a></div>
+      </div>
+      <div class="field"><label>Betreff / Projekt</label><input name="title" value="{{ d.title or '' }}" placeholder="z. B. Webseite Relaunch"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>{{ label }}sdatum</label><input type="date" name="issue_date" value="{{ d.issue_date.isoformat() if d.issue_date }}" required></div>
+      {% if d.kind == "invoice" %}
+      <div class="field"><label>Leistungsdatum / -zeitraum</label><input name="service_date" value="{{ d.service_date or '' }}" placeholder="z. B. 01.09.–30.09.2026"></div>
+      <div class="field"><label>Zahlbar bis</label><input type="date" name="due_date" value="{{ d.due_date.isoformat() if d.due_date }}"></div>
+      <div class="field"><label class="check" style="margin-bottom:6px"><input type="checkbox" name="skonto_on" value="1" id="skonto_on" {{ 'checked' if d.skonto_percent and d.skonto_days }}> Skonto</label>
+        <div class="actions" id="skonto_fields" style="flex-wrap:nowrap">
+          <input name="skonto_percent" value="{{ ('%.2f'|format(d.skonto_percent|float)).rstrip('0').rstrip('.').replace('.', ',') if d.skonto_percent else ('%.2f'|format(settings.skonto_percent|float)).rstrip('0').rstrip('.').replace('.', ',') }}" inputmode="decimal" style="width:70px"> <span>%</span>
+          <span>bei Zahlung in</span>
+          <input type="number" name="skonto_days" value="{{ d.skonto_days or settings.skonto_days }}" min="1" style="width:70px"> <span>Tagen</span>
+        </div></div>
+      {% else %}
+      <div class="field"><label>Gültig bis</label><input type="date" name="due_date" value="{{ d.due_date.isoformat() if d.due_date }}"></div>
+      {% endif %}
+    </div>
+    <div class="field">
+      <label>Umsatzsteuer</label>
+      <select name="small_business" id="sb">
+        <option value="1" {{ 'selected' if d.small_business }}>Kleinunternehmer – keine USt (§ 19 UStG)</option>
+        <option value="0" {{ 'selected' if not d.small_business }}>Regelbesteuerung – mit Umsatzsteuer</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Positionen</h2>
+    <div class="table-wrap">
+    <table class="items">
+      <thead><tr><th>Beschreibung</th><th class="w-qty">Menge</th><th class="w-unit">Einheit</th><th class="w-price">Einzelpreis (netto)</th><th class="w-vat vatcol">USt</th><th class="w-total num">Gesamt</th><th></th></tr></thead>
+      <tbody id="items">
+      {% for it in d.items %}
+        <tr>
+          <td class="cell-desc" data-label="Beschreibung"><textarea name="item_description" rows="{{ [(it.description or '').count('\n') + 1, 4]|min }}" required>{{ it.description or '' }}</textarea>
+              <input type="hidden" name="item_product_id" value="{{ it.product_id or '' }}"></td>
+          <td data-label="Menge"><input name="item_quantity" value="{{ it.quantity|qty }}" inputmode="decimal"></td>
+          <td data-label="Einheit"><input name="item_unit" value="{{ it.unit or '' }}" list="units"></td>
+          <td data-label="Einzelpreis"><input name="item_price" value="{{ it.unit_price|money(false) if it.unit_price else '' }}" inputmode="decimal" placeholder="0,00"></td>
+          <td class="vatcol" data-label="USt"><select name="item_vat">
+            {% for r in (19, 7, 0) %}<option value="{{ r }}" {{ 'selected' if (it.vat_rate or 0) == r }}>{{ r }} %</option>{% endfor %}
+          </select></td>
+          <td class="num line-total"></td>
+          <td><button type="button" class="small danger" onclick="removeRow(this)" title="Position entfernen">✕</button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <datalist id="units"><option>Std.</option><option>Stk.</option><option>Tag(e)</option><option>pauschal</option><option>km</option><option>Monat(e)</option></datalist>
+    <div class="actions" style="margin:12px 0">
+      <button type="button" onclick="addRow()">+ Freie Position</button>
+      {% if products %}
+      <div class="picker">
+        <input id="pick" placeholder="Aus Katalog hinzufügen – z. B. „Access Point“ oder „Kamera“ …" autocomplete="off">
+        <div class="picker-list" id="pick-list" hidden></div>
+      </div>
+      {% else %}
+      <a class="hint" href="{{ url_for('products') }}">Produkte &amp; Leistungen anlegen, um sie hier per Klick einzufügen →</a>
+      {% endif %}
+    </div>
+    <div class="totals" id="totals"></div>
+  </div>
+
+  <div class="card">
+    <div class="field"><label>Einleitungstext</label><textarea name="intro">{{ d.intro or '' }}</textarea></div>
+    <div class="field"><label>Schlusstext</label><textarea name="footer">{{ d.footer or '' }}</textarea>
+      {% if d.kind == "invoice" %}<div class="hint">Platzhalter <code>{faellig}</code> wird durch das Fälligkeitsdatum ersetzt.</div>{% endif %}</div>
+  </div>
+
+  <div class="actions">
+    <button type="submit" name="action" value="save">Als Entwurf speichern</button>
+    <button type="submit" name="action" value="finalize" class="primary"
+            onclick="return confirm('{{ label }} festschreiben? Danach wird eine Nummer vergeben und das Dokument kann nicht mehr geändert werden.')">
+      Speichern &amp; festschreiben</button>
+    <a class="btn" href="{{ url_for('document_view', did=d.id) if d.id else url_for('documents', kind=d.kind) }}">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const skontoOn = document.getElementById('skonto_on');
+if (skontoOn) {
+  const sf = document.getElementById('skonto_fields');
+  const syncSkonto = () => { sf.style.opacity = skontoOn.checked ? 1 : .4; sf.querySelectorAll('input').forEach(i => i.disabled = !skontoOn.checked); };
+  skontoOn.addEventListener('change', syncSkonto); syncSkonto();
+}
+const tbody = document.getElementById('items');
+const sb = document.getElementById('sb');
+const defaultVat = {{ settings.default_vat_rate }};
+
+function parseNum(v) {
+  v = (v || '').trim().replace(/\s|€/g, '');
+  if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+const fmt = n => n.toLocaleString('de-DE', {style: 'currency', currency: 'EUR'});
+
+function recalc() {
+  const small = sb.value === '1';
+  document.querySelectorAll('.vatcol').forEach(el => el.style.display = small ? 'none' : '');
+  let net = 0; const vat = {};
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const q = parseNum(tr.querySelector('[name=item_quantity]').value);
+    const p = parseNum(tr.querySelector('[name=item_price]').value);
+    const r = parseInt(tr.querySelector('[name=item_vat]').value);
+    const line = Math.round(q * p * 100) / 100;
+    tr.querySelector('.line-total').textContent = fmt(line);
+    net += line;
+    if (!small && r) vat[r] = (vat[r] || 0) + line;
+  });
+  let html = '', gross = net;
+  if (!small) {
+    html += `<div><span>Summe netto</span><span>${fmt(net)}</span></div>`;
+    Object.keys(vat).sort().forEach(r => {
+      const v = Math.round(vat[r] * r) / 100;
+      gross += v;
+      html += `<div><span>zzgl. ${r} % USt</span><span>${fmt(v)}</span></div>`;
+    });
+  }
+  html += `<div class="grand"><span>Gesamtbetrag</span><span>${fmt(gross)}</span></div>`;
+  if (small) html += '<div class="muted" style="font-size:13px">Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.</div>';
+  document.getElementById('totals').innerHTML = html;
+}
+
+function addRow(p) {
+  // Leere erste Zeile wiederverwenden statt eine neue anzuhängen
+  let tr = [...tbody.querySelectorAll('tr')].find(r =>
+    !r.querySelector('[name=item_description]').value.trim() && !r.querySelector('[name=item_price]').value.trim());
+  if (!tr) {
+    tr = tbody.querySelector('tr').cloneNode(true);
+    tbody.appendChild(tr);
+  }
+  tr.querySelectorAll('input, textarea').forEach(el => el.value = '');
+  tr.querySelector('[name=item_quantity]').value = '1';
+  tr.querySelector('[name=item_unit]').value = p ? p.unit : 'Std.';
+  tr.querySelector('[name=item_vat]').value = String(p && p.vat ? p.vat : defaultVat);
+  if (p) {
+    const ta = tr.querySelector('textarea');
+    ta.value = p.text;
+    ta.rows = Math.min(p.text.split('\n').length, 4);
+    tr.querySelector('[name=item_price]').value = p.price;
+    tr.querySelector('[name=item_product_id]').value = p.id;
+    tr.querySelector('[name=item_quantity]').select();
+  } else {
+    tr.querySelector('textarea').focus();
+  }
+  recalc();
+}
+
+// Katalogsuche
+const products = {{ products|tojson }};
+const pick = document.getElementById('pick'), pickList = document.getElementById('pick-list');
+let pickIdx = 0, pickHits = [];
+function renderPick() {
+  const q = pick.value.trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  pickHits = products.filter(p => {
+    const hay = `${p.name} ${p.manufacturer} ${p.sku} ${p.category} ${p.text}`.toLowerCase();
+    return words.every(w => hay.includes(w));
+  }).slice(0, 12);
+  pickIdx = 0;
+  pickList.innerHTML = '';
+  pickHits.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'pick-item' + (i === 0 ? ' active' : '');
+    const kind = p.kind === 'product' ? 'Produkt' : 'Leistung';
+    div.innerHTML = `<span><strong></strong> <span class="muted"></span></span><span class="num"></span>`;
+    div.querySelector('strong').textContent = (p.manufacturer && !p.name.toLowerCase().startsWith(p.manufacturer.toLowerCase()) ? p.manufacturer + ' ' : '') + p.name;
+    div.querySelector('.muted').textContent = [kind, p.category, p.sku].filter(Boolean).join(' · ');
+    div.querySelector('.num').textContent = `${p.price} € / ${p.unit}`;
+    div.addEventListener('mousedown', e => { e.preventDefault(); choose(i); });
+    pickList.appendChild(div);
+  });
+  if (!pickHits.length) pickList.innerHTML = '<div class="muted" style="padding:8px">Nichts gefunden.</div>';
+  pickList.hidden = false;
+}
+function choose(i) {
+  if (!pickHits[i]) return;
+  addRow(pickHits[i]);
+  pick.value = '';
+  pickList.hidden = true;
+}
+if (pick) {
+  pick.addEventListener('focus', renderPick);
+  pick.addEventListener('input', renderPick);
+  pick.addEventListener('blur', () => setTimeout(() => pickList.hidden = true, 100));
+  pick.addEventListener('keydown', e => {
+    const items = pickList.querySelectorAll('.pick-item');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      pickIdx = (pickIdx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % Math.max(items.length, 1);
+      items.forEach((el, i) => el.classList.toggle('active', i === pickIdx));
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); choose(pickIdx);
+    } else if (e.key === 'Escape') {
+      pickList.hidden = true;
+    }
+  });
+}
+function removeRow(btn) {
+  if (tbody.querySelectorAll('tr').length > 1) btn.closest('tr').remove();
+  recalc();
+}
+document.getElementById('docform').addEventListener('input', recalc);
+sb.addEventListener('change', () => {
+  if (sb.value === '0') tbody.querySelectorAll('[name=item_vat]').forEach(s => { if (s.value === '0') s.value = String(defaultVat); });
+  recalc();
+});
+recalc();
+</script>
+{% endblock %}

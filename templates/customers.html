@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Kunden{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Kunden</h1>
+  <div class="actions">
+    <form method="get" class="actions"><input name="q" value="{{ q }}" placeholder="Suchen …" style="width:220px"></form>
+    {% if can('customers_edit') %}<a class="btn primary" href="{{ url_for('customer_edit') }}">+ Neuer Kunde</a>{% endif %}
+  </div>
+</div>
+<div class="card">
+  {% if customers %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Nr.</th><th>Firma / Name</th><th>Ort</th><th>E-Mail</th><th>Telefon</th></tr></thead>
+    <tbody>
+    {% for c in customers %}
+      <tr data-href="{{ url_for('customer_edit', cid=c.id) }}">
+        <td>{{ c.customer_number }}</td><td>{{ c.display_name }}</td>
+        <td>{{ c.zip_code }} {{ c.city }}</td><td>{{ c.email }}</td><td>{{ c.phone }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<div class="empty">{{ 'Keine Treffer.' if q else 'Noch keine Kunden angelegt.' }}</div>{% endif %}
+</div>
+{% endblock %}

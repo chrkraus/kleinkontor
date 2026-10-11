@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ c.display_name if c.id else "Neuer Kunde" }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ c.display_name if c.id else "Neuer Kunde" }} {% if c.customer_number %}<span class="muted" style="font-weight:400">· {{ c.customer_number }}</span>{% endif %}</h1>
+  {% if c.id %}
+  <div class="actions">
+    {% if can('documents_edit') %}<a class="btn" href="{{ url_for('document_new', kind='offer', customer_id=c.id) }}">+ Angebot</a>{% endif %}
+    {% if can('documents_edit') %}<a class="btn" href="{{ url_for('document_new', kind='invoice', customer_id=c.id) }}">+ Rechnung</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+<form method="post" class="card">
+  <div class="form-row">
+    <div class="field"><label>Firma</label><input name="company" value="{{ c.company or '' }}" autofocus></div>
+    <div class="field"><label>Ansprechpartner / Name</label><input name="name" value="{{ c.name or '' }}"></div>
+  </div>
+  <div class="field"><label>Straße und Hausnummer</label><input name="street" value="{{ c.street or '' }}"></div>
+  <div class="form-row">
+    <div class="field"><label>PLZ</label><input name="zip_code" value="{{ c.zip_code or '' }}"></div>
+    <div class="field"><label>Ort</label><input name="city" value="{{ c.city or '' }}"></div>
+    <div class="field"><label>Land</label><input name="country" value="{{ c.country or '' }}"></div>
+  </div>
+  <div class="form-row">
+    <div class="field"><label>E-Mail</label><input type="email" name="email" value="{{ c.email or '' }}"></div>
+    <div class="field"><label>Telefon</label><input name="phone" value="{{ c.phone or '' }}"></div>
+    <div class="field"><label>USt-IdNr. (bei Geschäftskunden im EU-Ausland)</label><input name="vat_id" value="{{ c.vat_id or '' }}"></div>
+  </div>
+  <div class="field"><label>Käuferreferenz / Leitweg-ID (für E-Rechnungen, falls vom Kunden vorgegeben)</label><input name="buyer_reference" value="{{ c.buyer_reference or '' }}" placeholder="z. B. Bestellnummer, Kostenstelle oder Leitweg-ID bei Behörden"></div>
+  <div class="field"><label>Notizen</label><textarea name="notes">{{ c.notes or '' }}</textarea></div>
+  <div class="actions">
+    {% if can('customers_edit') %}<button class="primary" type="submit">Speichern</button>{% endif %}
+    <a class="btn" href="{{ url_for('customers') }}">Zurück</a>
+  </div>
+</form>
+{% if c.id %}
+<div class="card">
+  <h2>Angebote &amp; Rechnungen</h2>
+  {% if docs %}
+  <table>
+    <thead><tr><th>Typ</th><th>Nr.</th><th>Datum</th><th>Status</th><th class="num">Betrag</th></tr></thead>
+    <tbody>
+    {% for d in docs %}
+      <tr data-href="{{ url_for('document_view', did=d.id) }}">
+        <td>{{ d.kind_label }}</td><td>{{ d.display_number }}</td><td>{{ d.issue_date|date }}</td>
+        <td><span class="badge {{ d.status }}">{{ d.status_label }}</span></td><td class="num">{{ d.gross|money }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty">Noch keine Dokumente.</div>
+    <form method="post" action="{{ url_for('customer_delete', cid=c.id) }}" data-confirm="Kunde wirklich löschen?">
+      {% if can('customers_edit') %}<button class="danger small">Kunde löschen</button>{% endif %}
+    </form>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

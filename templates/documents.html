@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set label = "Angebote" if kind == "offer" else "Rechnungen" %}
+{% block title %}{{ label }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ label }}</h1>
+  {% if can('documents_edit') %}<a class="btn primary" href="{{ url_for('document_new', kind=kind) }}">+ {{ "Neues Angebot" if kind == "offer" else "Neue Rechnung" }}</a>{% endif %}
+</div>
+<form method="get" class="filters">
+  <select name="status" onchange="this.form.submit()">
+    <option value="">Alle Status</option>
+    {% for st in statuses %}<option value="{{ st }}" {{ 'selected' if st == status }}>{{ STATUS_LABELS[st] }}</option>{% endfor %}
+  </select>
+  <select name="jahr" onchange="this.form.submit()">
+    <option value="">Alle Jahre</option>
+    {% for y in years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
+  </select>
+</form>
+<div class="card">
+  {% if docs %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Nr.</th><th class="hm">Datum</th><th>Kunde</th><th class="hm">Betreff</th><th class="hm">{{ "Gültig bis" if kind == "offer" else "Fällig" }}</th><th>Status</th><th class="num">Betrag</th></tr></thead>
+    <tbody>
+    {% for d in docs %}
+      <tr data-href="{{ url_for('document_view', did=d.id) }}">
+        <td>{{ d.display_number }}{% if d.cancels_id %} <span class="muted">(Storno)</span>{% endif %}</td>
+        <td class="hm">{{ d.issue_date|date }}</td>
+        <td>{{ d.customer.display_name }}<div class="sm-only muted">{{ d.issue_date|date }}{{ ' · ' ~ d.title if d.title }}</div></td>
+        <td class="hm">{{ d.title }}</td>
+        <td class="hm">{{ d.due_date|date }}</td>
+        <td>
+          <span class="badge {{ d.status }}">{{ d.status_label }}</span>
+          {% if d.overdue %}<span class="badge overdue">überfällig</span>{% endif %}
+        </td>
+        <td class="num">{{ d.gross|money }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="6" class="hm">Summe (ohne stornierte)</td><td colspan="3" class="sm-cell">Summe</td><td class="num">{{ total|money }}</td></tr></tfoot>
+  </table>
+  </div>
+  {% else %}<div class="empty">Keine {{ label }} gefunden.</div>{% endif %}
+</div>
+{% endblock %}

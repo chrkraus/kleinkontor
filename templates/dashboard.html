@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Übersicht{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Übersicht {{ year }}</h1>
+  <div class="actions">
+    {% if can('documents_edit') %}<a class="btn" href="{{ url_for('document_new', kind='offer') }}">+ Angebot</a>{% endif %}
+    {% if can('documents_edit') %}<a class="btn" href="{{ url_for('document_new', kind='invoice') }}">+ Rechnung</a>{% endif %}
+    {% if can('bookkeeping_edit') %}<a class="btn primary" href="{{ url_for('transaction_edit', art='expense') }}">+ Ausgabe erfassen</a>{% endif %}
+  </div>
+</div>
+
+{% if inbox_count %}
+<div class="flash info">📥 {{ inbox_count }} neue{{ 'r' if inbox_count == 1 }} Beleg{{ 'e' if inbox_count != 1 }} aus Paperless – <a href="{{ url_for('inbox') }}">jetzt prüfen und buchen</a>.</div>
+{% endif %}
+{% if overdue_count %}
+<div class="flash error">⏰ {{ overdue_count }} überfällige Rechnung{{ 'en' if overdue_count != 1 }} – <a href="{{ url_for('reminders') }}">Erinnerungen ansehen</a>.</div>
+{% endif %}
+{% if can('settings') %}
+{% if nas_status and (not nas_status.ok or nas_status.stale) %}
+<div class="flash error">Übertragung der Sicherungen auf die NAS {{ "fehlgeschlagen" if not nas_status.ok else "seit mehr als 2 Tagen nicht erfolgt" }}{% if nas_status.info and not nas_status.ok %}: {{ nas_status.info }}{% endif %} – <a href="{{ url_for('settings_view') }}#backup">Details</a></div>
+{% endif %}
+{% if settings.last_backup_error %}
+<div class="flash error">Datensicherung: {{ settings.last_backup_error }} – <a href="{{ url_for('settings_view') }}#backup">Details</a></div>
+{% elif not settings.last_backup_at or (today - settings.last_backup_at.date()).days > 2 %}
+<div class="flash error">Seit mehr als 2 Tagen keine Datensicherung – <a href="{{ url_for('settings_view') }}#backup">prüfen</a>.</div>
+{% endif %}
+{% endif %}
+{% if setup_needed and can('settings') %}
+<div class="flash info">Willkommen! Hinterlege zuerst deine <a href="{{ url_for('settings_view') }}">Firmendaten, Bankverbindung und Steuernummer</a> – sie erscheinen auf Angeboten und Rechnungen.</div>
+{% endif %}
+
+{% if can('bookkeeping_view') %}
+<div class="grid grid-4">
+  <div class="card stat"><div class="label">Einnahmen {{ year }}{% if not settings.small_business %} (netto){% endif %}</div><div class="value">{{ income|money }}</div></div>
+  <div class="card stat"><div class="label">Ausgaben {{ year }}{% if not settings.small_business %} (netto){% endif %}</div><div class="value">{{ expense|money }}</div></div>
+  <div class="card stat"><div class="label">Gewinn {{ year }}</div><div class="value {{ 'pos' if income - expense >= 0 else 'neg' }}">{{ (income - expense)|money }}</div></div>
+  <div class="card stat"><div class="label">Offene Rechnungen ({{ open_invoices|length }})</div><div class="value">{{ open_sum|money }}</div></div>
+</div>
+{% endif %}
+
+{% if can('bookkeeping_view') %}
+{% if sb %}
+<div class="card">
+  <h2>Kleinunternehmerregelung (§ 19 UStG)</h2>
+  {% set pct_cur = (sb.current / sb.limit_current * 100) %}
+  {% set pct_prev = (sb.prev / sb.limit_prev * 100) %}
+  <div class="grid grid-2">
+    <div>
+      <div class="muted">Umsatz {{ year - 1 }}: <strong>{{ sb.prev|money }}</strong> von {{ sb.limit_prev|money }}</div>
+      <div class="progress"><div class="{{ 'over' if pct_prev > 100 else ('warn' if pct_prev > 80) }}" style="width: {{ [pct_prev, 100]|min }}%"></div></div>
+    </div>
+    <div>
+      <div class="muted">Umsatz {{ year }}: <strong>{{ sb.current|money }}</strong> von {{ sb.limit_current|money }}</div>
+      <div class="progress"><div class="{{ 'over' if pct_cur > 100 else ('warn' if pct_cur > 80) }}" style="width: {{ [pct_cur, 100]|min }}%"></div></div>
+    </div>
+  </div>
+  {% if sb.current > sb.limit_prev %}
+  <p class="hint">Achtung: Dein Umsatz in diesem Jahr liegt über {{ sb.limit_prev|money }}. Damit entfällt die Kleinunternehmerregelung ab dem nächsten Jahr. Wird {{ sb.limit_current|money }} überschritten, entfällt sie bereits ab diesem Umsatz.</p>
+  {% else %}
+  <p class="hint">Grenzen ab 2025: Vorjahresumsatz max. 25.000 €, laufendes Jahr max. 100.000 €. Gezählt werden Einnahmen der Kategorie „Umsatzerlöse“.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}
+
+{% if can('documents_view') %}
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Offene Rechnungen</h2>
+    {% if open_invoices %}
+    <table>
+      <thead><tr><th>Nr.</th><th>Kunde</th><th>Fällig</th><th class="num">Betrag</th></tr></thead>
+      <tbody>
+      {% for d in open_invoices %}
+        <tr data-href="{{ url_for('document_view', did=d.id) }}">
+          <td>{{ d.number }}</td><td>{{ d.customer.display_name }}</td>
+          <td>{{ d.due_date|date }} {% if d.overdue %}<span class="badge overdue">überfällig</span>{% endif %}</td>
+          <td class="num">{{ d.gross|money }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty">Keine offenen Rechnungen.</div>{% endif %}
+  </div>
+  <div class="card">
+    <h2>Offene Angebote</h2>
+    {% if open_offers %}
+    <table>
+      <thead><tr><th>Nr.</th><th>Kunde</th><th>Gültig bis</th><th class="num">Betrag</th></tr></thead>
+      <tbody>
+      {% for d in open_offers %}
+        <tr data-href="{{ url_for('document_view', did=d.id) }}">
+          <td>{{ d.number }}</td><td>{{ d.customer.display_name }}</td><td>{{ d.due_date|date }}</td>
+          <td class="num">{{ d.gross|money }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty">Keine offenen Angebote.</div>{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if can('bookkeeping_view') %}
+<div class="card">
+  <h2>Letzte Buchungen</h2>
+  {% if recent %}
+  <table>
+    <thead><tr><th>Datum</th><th class="hm">Art</th><th class="hm">Kategorie</th><th>Beschreibung</th><th class="num">Betrag</th></tr></thead>
+    <tbody>
+    {% for t in recent %}
+      <tr data-href="{{ url_for('transaction_edit', tid=t.id) }}">
+        <td>{{ t.date|date }}</td>
+        <td class="hm"><span class="badge {{ t.kind }}">{{ 'Einnahme' if t.kind == 'income' else 'Ausgabe' }}</span></td>
+        <td class="hm">{{ t.category }}</td><td>{{ t.description or t.counterparty }}<div class="sm-only muted">{{ t.category }}</div></td>
+        <td class="num amt-{{ t.kind }}">{{ ('' if t.kind == 'income' else '−') ~ (t.gross_amount|money) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="empty">Noch keine Buchungen.</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

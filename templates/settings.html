@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen{% endblock %}
+{% block content %}
+<h1>Einstellungen</h1>
+<form method="post" enctype="multipart/form-data">
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Firmendaten</h2>
+    <div class="field"><label>Firmenname (optional)</label><input name="company_name" value="{{ s.company_name }}"></div>
+    <div class="field"><label>Inhaber/in</label><input name="owner_name" value="{{ s.owner_name }}"></div>
+    <div class="field"><label>Straße und Hausnummer</label><input name="street" value="{{ s.street }}"></div>
+    <div class="form-row">
+      <div class="field"><label>PLZ</label><input name="zip_code" value="{{ s.zip_code }}"></div>
+      <div class="field"><label>Ort</label><input name="city" value="{{ s.city }}"></div>
+    </div>
+    <div class="field"><label>Land</label><input name="country" value="{{ s.country }}"></div>
+    <div class="form-row">
+      <div class="field"><label>E-Mail</label><input name="email" value="{{ s.email }}"></div>
+      <div class="field"><label>Telefon</label><input name="phone" value="{{ s.phone }}"></div>
+    </div>
+    <div class="field"><label>Webseite</label><input name="website" value="{{ s.website }}"></div>
+    <div class="field">
+      <label>Logo (PNG, JPG oder SVG, erscheint oben rechts auf dem PDF – ideal: Querformat, transparenter Hintergrund)</label>
+      {% if s.logo_path %}<p><img src="{{ url_for('logo') }}" alt="Logo" style="max-height:60px;max-width:200px"><br>
+        <label class="check"><input type="checkbox" name="logo_remove" value="1"> Logo entfernen</label></p>{% endif %}
+      <input type="file" name="logo" accept=".png,.jpg,.jpeg,.svg">
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>Steuer</h2>
+      <div class="field">
+        <label>Besteuerung</label>
+        <select name="small_business">
+          <option value="1" {{ 'selected' if s.small_business }}>Kleinunternehmer (§ 19 UStG) – ohne Umsatzsteuer</option>
+          <option value="0" {{ 'selected' if not s.small_business }}>Regelbesteuerung – mit Umsatzsteuer</option>
+        </select>
+        <div class="hint">Gilt für neue Dokumente. Bereits erstellte Rechnungen behalten ihren Steuermodus.</div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Standard-USt-Satz</label>
+          <select name="default_vat_rate">{% for r in (19, 7) %}<option value="{{ r }}" {{ 'selected' if s.default_vat_rate == r }}>{{ r }} %</option>{% endfor %}</select></div>
+        <div class="field"><label>Steuernummer</label><input name="tax_number" value="{{ s.tax_number }}"></div>
+        <div class="field"><label>USt-IdNr.</label><input name="vat_id" value="{{ s.vat_id }}"></div>
+      </div>
+      <div class="hint">Auf Rechnungen muss die Steuernummer oder USt-IdNr. stehen (§ 14 Abs. 4 UStG).</div>
+    </div>
+    <div class="card">
+      <h2>Bankverbindung</h2>
+      <div class="field"><label>Bank</label><input name="bank_name" value="{{ s.bank_name }}"></div>
+      <div class="form-row">
+        <div class="field"><label>IBAN</label><input name="iban" value="{{ s.iban }}"></div>
+        <div class="field"><label>BIC</label><input name="bic" value="{{ s.bic }}"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Angebote &amp; Rechnungen</h2>
+  <div class="form-row">
+    <div class="field"><label>Präfix Rechnungsnummer</label><input name="invoice_prefix" value="{{ s.invoice_prefix }}"><div class="hint">→ {{ s.invoice_prefix }}-{{ today.year }}-0001</div></div>
+    <div class="field"><label>Präfix Angebotsnummer</label><input name="offer_prefix" value="{{ s.offer_prefix }}"><div class="hint">→ {{ s.offer_prefix }}-{{ today.year }}-0001</div></div>
+    <div class="field"><label>Zahlungsziel (Tage)</label><input type="number" name="payment_terms_days" value="{{ s.payment_terms_days }}"></div>
+    <div class="field"><label>Angebot gültig (Tage)</label><input type="number" name="offer_valid_days" value="{{ s.offer_valid_days }}"></div>
+  </div>
+  <div class="form-row" style="align-items:end">
+    <div class="field"><label class="check"><input type="checkbox" name="skonto_enabled" value="1" {{ 'checked' if s.skonto_enabled }}> Skonto bei neuen Rechnungen</label></div>
+    <div class="field"><label>Skonto (%)</label><input name="skonto_percent" value="{{ ('%.2f'|format(s.skonto_percent|float)).rstrip('0').rstrip('.').replace('.', ',') }}" inputmode="decimal"></div>
+    <div class="field"><label>bei Zahlung innerhalb von (Tagen)</label><input type="number" name="skonto_days" value="{{ s.skonto_days }}" min="1"></div>
+  </div>
+  <div class="grid grid-2">
+    <div>
+      <div class="field"><label>Standard-Einleitung Angebot</label><textarea name="offer_intro">{{ s.offer_intro }}</textarea></div>
+      <div class="field"><label>Standard-Schlusstext Angebot</label><textarea name="offer_footer">{{ s.offer_footer }}</textarea></div>
+    </div>
+    <div>
+      <div class="field"><label>Standard-Einleitung Rechnung</label><textarea name="invoice_intro">{{ s.invoice_intro }}</textarea></div>
+      <div class="field"><label>Standard-Schlusstext Rechnung</label><textarea name="invoice_footer">{{ s.invoice_footer }}</textarea>
+        <div class="hint"><code>{faellig}</code> = Fälligkeitsdatum</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>E-Rechnung (ZUGFeRD)</h2>
+  <label class="check"><input type="checkbox" name="einvoice_enabled" value="1" {{ 'checked' if s.einvoice_enabled }}> Rechnungen als ZUGFeRD-PDF erzeugen (Profil EN 16931)</label>
+  <p class="hint">Das PDF sieht aus wie bisher und enthält zusätzlich die maschinenlesbaren Rechnungsdaten als XML (PDF/A-3). Es ist für jeden Empfänger lesbar und erfüllt die Anforderungen an eine E-Rechnung zwischen Unternehmen. Voraussetzung: Name, vollständige Anschrift sowie Steuernummer oder USt-IdNr. sind hinterlegt.</p>
+</div>
+
+<div class="card" id="sicherheit">
+  <h2>Anmeldung &amp; Benutzer</h2>
+  <label class="check" style="margin-bottom:12px"><input type="checkbox" name="require_2fa" value="1" {{ 'checked' if s.require_2fa }}> Zwei-Faktor-Anmeldung für <strong>alle</strong> Benutzer vorschreiben (empfohlen, sobald die App aus dem Internet erreichbar ist)</label>
+  <div class="field"><label>Adresse der App (für Links in E-Mails, z. B. „Passwort vergessen“)</label>
+    <input name="app_url" value="{{ s.app_url }}" placeholder="https://buchhaltung.example.de">
+    <div class="hint">So, wie du die App im Browser aufrufst. Der Link aus der E-Mail funktioniert nur, wo diese Adresse erreichbar ist – bei einer Heimnetz-Adresse also nur zu Hause bzw. per VPN.</div></div>
+  <p class="muted">Das eigene Passwort änderst du unter <a href="{{ url_for('account') }}">Mein Konto</a>.{% if current_user and current_user.is_admin %} Benutzer und Rechte verwaltest du unter <a href="{{ url_for('users') }}">Benutzer &amp; Protokoll</a>.{% endif %}</p>
+</div>
+
+<div class="card" id="backup">
+  <h2>Datensicherung</h2>
+  <p>Die App sichert sich automatisch alle 24 Stunden.
+    {% if s.last_backup_at %}Letzte Sicherung: <strong>{{ s.last_backup_at.strftime('%d.%m.%Y %H:%M') }}</strong> ({{ s.last_backup_file }}).{% else %}<strong>Noch keine Sicherung vorhanden.</strong>{% endif %}
+    {{ backup_count }} Sicherung{{ 'en' if backup_count != 1 }} im Ordner <code>data/backups</code>.</p>
+  {% if s.last_backup_error %}<div class="flash error">{{ s.last_backup_error }}</div>{% endif %}
+  {% if nas_status %}
+  <p>NAS-Kopie (verschlüsselt, täglicher Abgleich per nas_sync.sh):
+    {% if nas_status.at %}<strong>{{ nas_status.at.strftime('%d.%m.%Y %H:%M') }}</strong>{% endif %}
+    {% if nas_status.ok and not nas_status.stale %}<span class="badge paid">OK – {{ nas_status.info }} Sicherungen</span>
+    {% else %}<span class="badge overdue">{{ nas_status.info or "Problem" }}</span>{% endif %}</p>
+  {% endif %}
+  <div class="form-row">
+    <div class="field"><label>Zusätzlicher Sicherungsordner (optional)</label><input name="backup_dir" value="{{ s.backup_dir }}" placeholder="z. B. /mnt/nas/buchhaltung">
+      <div class="hint">Am besten ein anderes Gerät (NAS, eingebundene Freigabe). Eine Kopie auf derselben Festplatte schützt nicht vor einem Festplattendefekt.</div></div>
+    <div class="field"><label>Anzahl täglicher Sicherungen</label><input type="number" name="backup_keep" value="{{ s.backup_keep or 30 }}" min="3">
+      <div class="hint">Zusätzlich bleibt je Monat eine Sicherung für 24 Monate erhalten.</div></div>
+  </div>
+  <div class="actions">
+    <button type="submit" formaction="{{ url_for('backup_now') }}" formnovalidate>Jetzt sichern</button>
+    {% if backups %}<a class="btn" href="{{ url_for('backup_download', name=backups[0]) }}">Neueste Sicherung herunterladen</a>{% endif %}
+  </div>
+</div>
+
+<div class="card" id="belegeingang">
+  <h2>Belegeingang aus Paperless</h2>
+  <label class="check"><input type="checkbox" name="paperless_inbox_enabled" value="1" {{ 'checked' if s.paperless_inbox_enabled }}> Belege automatisch alle 15 Minuten abrufen</label>
+  <div class="field" style="margin-top:10px"><label>Paperless-Tag für Geschäftsbelege</label><input name="paperless_inbox_tag" value="{{ s.paperless_inbox_tag }}">
+    <div class="hint">Alle Dokumente mit diesem Tag erscheinen im <a href="{{ url_for('inbox') }}">Belegeingang</a> als Buchungsvorschlag. Eigene Ausgangsrechnungen und bereits verknüpfte Belege werden übersprungen.</div></div>
+  {% if s.paperless_sync_error %}<div class="flash error">{{ s.paperless_sync_error }}</div>{% endif %}
+</div>
+
+<div class="card" id="erinnerungen">
+  <h2>Zahlungserinnerungen</h2>
+  <label class="check"><input type="checkbox" name="reminder_auto" value="1" {{ 'checked' if s.reminder_auto }}> Erinnerungen automatisch per E-Mail versenden</label>
+  <p class="hint">Nur aktivieren, wenn Zahlungseingänge zeitnah als „bezahlt“ markiert werden – sonst bekommt ein Kunde, der längst gezahlt hat, eine Erinnerung. Ohne Automatik verschickst du sie unter <a href="{{ url_for('reminders') }}">Erinnerungen</a> mit einem Klick.</p>
+  <div class="form-row">
+    <div class="field"><label>Erste Erinnerung (Tage nach Fälligkeit)</label><input type="number" name="reminder_days" value="{{ s.reminder_days }}" min="1"></div>
+    <div class="field"><label>Abstand weiterer Erinnerungen (Tage)</label><input type="number" name="reminder_interval_days" value="{{ s.reminder_interval_days }}" min="1"></div>
+    <div class="field"><label>Höchstens (Anzahl)</label><input type="number" name="reminder_max" value="{{ s.reminder_max }}" min="1" max="5"></div>
+  </div>
+  <div class="field"><label>Betreff</label><input name="mail_reminder_subject" value="{{ s.mail_reminder_subject }}"></div>
+  <div class="field"><label>Text</label><textarea name="mail_reminder_body" rows="10">{{ s.mail_reminder_body }}</textarea>
+    <div class="hint">Zusätzliche Platzhalter: <code>{erinnerung}</code> („Zahlungserinnerung“ bzw. „2. Zahlungserinnerung“), <code>{tage_ueberfaellig}</code>, <code>{stufe}</code>. Die Rechnung wird automatisch angehängt.</div></div>
+</div>
+
+<div class="card" id="mail">
+  <h2>E-Mail-Versand</h2>
+  <div class="form-row">
+    <div class="field"><label>SMTP-Server</label><input name="smtp_host" value="{{ s.smtp_host }}" placeholder="z. B. smtp.example.de"></div>
+    <div class="field"><label>Port</label><input type="number" name="smtp_port" value="{{ s.smtp_port or 587 }}"></div>
+    <div class="field"><label>Verschlüsselung</label>
+      <select name="smtp_security">
+        <option value="starttls" {{ 'selected' if s.smtp_security == 'starttls' }}>STARTTLS (meist Port 587)</option>
+        <option value="ssl" {{ 'selected' if s.smtp_security == 'ssl' }}>SSL/TLS (meist Port 465)</option>
+        <option value="none" {{ 'selected' if s.smtp_security == 'none' }}>keine (nicht empfohlen)</option>
+      </select></div>
+  </div>
+  <div class="form-row">
+    <div class="field"><label>Benutzername</label><input name="smtp_user" value="{{ s.smtp_user }}" autocomplete="off" placeholder="meist die E-Mail-Adresse"></div>
+    <div class="field"><label>Passwort {% if s.smtp_password %}(hinterlegt){% endif %}</label>
+      <input type="password" name="smtp_password" autocomplete="new-password" placeholder="{{ '••••••••  (leer lassen = unverändert)' if s.smtp_password else '' }}">
+      {% if s.smtp_password %}<label class="check" style="margin-top:6px"><input type="checkbox" name="smtp_password_clear" value="1"> Passwort entfernen</label>{% endif %}</div>
+  </div>
+  <div class="form-row">
+    <div class="field"><label>Absendername</label><input name="mail_from_name" value="{{ s.mail_from_name }}" placeholder="{{ s.company_name or s.owner_name }}"></div>
+    <div class="field"><label>Absender-Adresse</label><input type="email" name="mail_from_address" value="{{ s.mail_from_address }}" placeholder="{{ s.email or 'info@ihre-firma.de' }}"></div>
+  </div>
+  <label class="check"><input type="checkbox" name="mail_bcc_self" value="1" {{ 'checked' if s.mail_bcc_self }}> Kopie jeder versendeten Mail an mich selbst (BCC)</label>
+  <p class="hint">Die Zugangsdaten stehen in den Einstellungen deines Mail-Anbieters. Bei Konten mit Zwei-Faktor-Anmeldung (z. B. Gmail) brauchst du ein App-Passwort.</p>
+  <div class="grid grid-2" style="margin-top:14px">
+    <div>
+      <div class="field"><label>Betreff Angebot</label><input name="mail_offer_subject" value="{{ s.mail_offer_subject }}"></div>
+      <div class="field"><label>Text Angebot</label><textarea name="mail_offer_body" rows="9">{{ s.mail_offer_body }}</textarea></div>
+    </div>
+    <div>
+      <div class="field"><label>Betreff Rechnung</label><input name="mail_invoice_subject" value="{{ s.mail_invoice_subject }}"></div>
+      <div class="field"><label>Text Rechnung</label><textarea name="mail_invoice_body" rows="9">{{ s.mail_invoice_body }}</textarea></div>
+    </div>
+  </div>
+  <p class="hint">Platzhalter: <code>{anrede}</code> (z. B. „Guten Tag Anna Schmidt“), <code>{ansprechpartner}</code>, <code>{kunde}</code>, <code>{nummer}</code>, <code>{datum}</code>, <code>{betrag}</code>, <code>{faellig}</code>, <code>{gueltig_bis}</code>, <code>{betreff}</code>, <code>{name}</code>, <code>{firma}</code>, <code>{skonto}</code> (Skonto-Hinweis – wird bei Rechnungen mit Skonto automatisch ergänzt, falls nicht in der Vorlage)</p>
+  <button type="submit" name="action" value="test_mail">Speichern &amp; Testmail an mich senden</button>
+</div>
+
+<div class="card">
+  <h2>Paperless-ngx</h2>
+  <div class="form-row">
+    <div class="field"><label>URL</label><input name="paperless_url" value="{{ s.paperless_url }}" placeholder="http://192.168.1.10:8000"></div>
+    <div class="field"><label>API-Token {% if s.paperless_token %}(hinterlegt){% endif %}</label>
+      <input type="password" name="paperless_token" placeholder="{{ '••••••••  (leer lassen = unverändert)' if s.paperless_token else 'Token aus Paperless → Profil' }}" autocomplete="off">
+      {% if s.paperless_token %}<label class="check" style="margin-top:6px"><input type="checkbox" name="paperless_token_clear" value="1"> Token entfernen</label>{% endif %}
+    </div>
+  </div>
+  <label class="check"><input type="checkbox" name="paperless_archive_invoices" value="1" {{ 'checked' if s.paperless_archive_invoices }}> Rechnungen beim Festschreiben automatisch als PDF in Paperless ablegen</label>
+  <p class="hint">Den API-Token findest du in Paperless unter deinem Profil (oben rechts) → „API Auth Token“.</p>
+  <button type="submit" name="action" value="test_paperless">Speichern &amp; Verbindung testen</button>
+</div>
+
+<div class="actions"><button type="submit" class="primary" name="action" value="save">Einstellungen speichern</button></div>
+</form>
+{% endblock %}

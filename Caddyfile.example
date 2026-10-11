@@ -1,0 +1,31 @@
+# Beispiel: HTTPS im Heimnetz mit Caddy vor der Buchhaltung (localhost:5000).
+# Als „Caddyfile“ kopieren (nicht im git) und Domains/Zertifikatspfade anpassen.
+# Zertifikat z. B. per acme.sh mit DNS-Prüfung holen (siehe README, Abschnitt HTTPS).
+{
+	admin 127.0.0.1:2019
+	auto_https off
+	servers {
+		protocols h1 h2
+	}
+}
+
+buchhaltung.example.de:443 {
+	tls {$BUCHHALTUNG_DIR}/data/tls/fullchain.pem {$BUCHHALTUNG_DIR}/data/tls/key.pem
+	encode gzip
+	reverse_proxy 127.0.0.1:5000 {
+		# Nur Caddy setzt die Client-IP; vom Gerät mitgeschickte Header werden entfernt
+		header_up -Cf-Connecting-Ip
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto https
+	}
+}
+
+# Optional: Testumgebung (BUCHHALTUNG_ENV=test, Port 5001)
+# test.example.de:443 {
+# 	tls {$BUCHHALTUNG_DIR}/data/tls/test-fullchain.pem {$BUCHHALTUNG_DIR}/data/tls/test-key.pem
+# 	reverse_proxy 127.0.0.1:5001 {
+# 		header_up -Cf-Connecting-Ip
+# 		header_up X-Forwarded-For {remote_host}
+# 		header_up X-Forwarded-Proto https
+# 	}
+# }

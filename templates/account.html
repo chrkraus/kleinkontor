@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Mein Konto{% endblock %}
+{% block content %}
+<h1>Mein Konto</h1>
+<form method="post" class="card" style="max-width:640px">
+  <div class="form-row">
+    <div class="field"><label>Benutzername</label><input value="{{ u.username }}" disabled></div>
+    <div class="field"><label>Anzeigename</label><input name="display_name" value="{{ u.display_name }}"></div>
+  </div>
+  <div class="field"><label>E-Mail-Adresse (für „Passwort vergessen“)</label><input type="email" name="email" value="{{ u.email or '' }}">
+    {% if not u.email %}<div class="hint" style="color:var(--danger)">Ohne E-Mail-Adresse kannst du dein Passwort nicht selbst zurücksetzen.</div>{% endif %}</div>
+  <p class="muted">Rolle: {% if u.is_admin %}<strong>Admin</strong> (alle Rechte){% else %}{{ u.permission_set|length }} Einzelrecht{{ 'e' if u.permission_set|length != 1 }}{% endif %}</p>
+  <p>Zwei-Faktor-Anmeldung: {% if u.totp_enabled %}<span class="badge paid">aktiv</span>{% else %}<span class="badge overdue">aus</span>{% endif %}
+    – <a href="{{ url_for('twofa_setup') }}">{{ "verwalten" if u.totp_enabled else "jetzt einrichten" }}</a></p>
+  <h2>Passwort ändern</h2>
+  <div class="form-row">
+    <div class="field"><label>Aktuelles Passwort</label><input type="password" name="current_password" autocomplete="current-password"></div>
+    <div class="field"><label>Neues Passwort (mind. 8 Zeichen)</label><input type="password" name="new_password" autocomplete="new-password" minlength="8"></div>
+    <div class="field"><label>Wiederholen</label><input type="password" name="new_password2" autocomplete="new-password"></div>
+  </div>
+  <button class="primary" type="submit">Speichern</button>
+</form>
+{% endblock %}

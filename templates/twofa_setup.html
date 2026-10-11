@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Zwei-Faktor-Anmeldung{% endblock %}
+{% block content %}
+<h1>Zwei-Faktor-Anmeldung</h1>
+{% if codes %}
+<div class="card" style="max-width:640px">
+  <h2>Deine Wiederherstellungscodes</h2>
+  <p>Mit jedem Code kannst du dich <strong>einmal</strong> anmelden, falls das Handy verloren geht. <strong>Jetzt ausdrucken oder sicher aufbewahren</strong> (z. B. im Passwort-Manager) – sie werden nur dieses eine Mal angezeigt.</p>
+  <pre style="font-size:17px;line-height:1.7;background:var(--accent-soft);padding:14px;border-radius:6px">{% for c in codes %}{{ c }}
+{% endfor %}</pre>
+  <div class="actions"><button type="button" onclick="window.print()">Drucken</button><a class="btn primary" href="{{ url_for('account') }}">Fertig</a></div>
+</div>
+{% elif u.totp_enabled %}
+<div class="card" style="max-width:640px">
+  <p><span class="badge paid">aktiv</span> Bei der Anmeldung wird zusätzlich ein Code aus deiner Authenticator-App abgefragt.</p>
+  <p class="muted">Noch {{ remaining }} unbenutzte Wiederherstellungscodes.</p>
+  <form method="post" class="field">
+    <label>Passwort zur Bestätigung</label>
+    <div class="actions"><input type="password" name="password" required autocomplete="current-password" style="max-width:260px">
+      <button name="action" value="new_codes">Neue Wiederherstellungscodes</button>
+      {% if not settings.require_2fa %}<button name="action" value="disable" class="danger">Zwei-Faktor abschalten</button>{% endif %}</div>
+  </form>
+</div>
+{% else %}
+<div class="grid grid-2">
+  <div class="card">
+    <h2>1. App einrichten</h2>
+    <p>Installiere eine Authenticator-App auf dem Handy (z. B. <em>Google Authenticator</em>, <em>Microsoft Authenticator</em> oder <em>2FAS</em>) und scanne diesen QR-Code:</p>
+    <div style="background:#fff;display:inline-block;padding:8px;border-radius:6px;width:220px">{{ qr|safe }}</div>
+    <p class="hint">Kein Scan möglich? Schlüssel manuell eingeben:<br><code style="font-size:14px;word-break:break-all">{{ secret }}</code></p>
+  </div>
+  <div class="card">
+    <h2>2. Code bestätigen</h2>
+    <form method="post">
+      <div class="field"><label>6-stelliger Code aus der App</label><input name="code" required inputmode="numeric" autocomplete="one-time-code" style="font-size:22px;letter-spacing:4px;max-width:200px"></div>
+      <button class="primary" name="action" value="enable">Aktivieren</button>
+    </form>
+    <p class="hint">Danach bekommst du Wiederherstellungscodes für den Notfall.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

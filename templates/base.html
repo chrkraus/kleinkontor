@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ '[TEST] ' if is_test }}{% block title %}Buchhaltung{% endblock %} · {{ settings.company_name or "Buchhaltung" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" crossorigin="use-credentials">
+  <link rel="icon" type="image/png" href="{{ url_for('app_icon', size=192) }}">
+  <link rel="apple-touch-icon" href="{{ url_for('app_icon', size=180) }}">
+  <meta name="theme-color" content="#28466e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Buchhaltung">
+</head>
+<body>
+{% if is_test %}<div class="test-banner">⚠ TESTUMGEBUNG – Kopie der Daten · E-Mails gehen nur an dich · Paperless nur lesend</div>{% endif %}
+<div class="layout">
+  <div class="topbar">
+    <a class="topbar-brand" href="{{ url_for('dashboard') }}"><img src="{{ url_for('app_icon', size=192) }}" alt=""> Buchhaltung</a>
+    <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="sidebar">☰ Menü{% if inbox_count or overdue_count %} <span class="dot"></span>{% endif %}</button>
+  </div>
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">Buchhaltung<small>{{ settings.company_name or settings.owner_name or "Meine Firma" }}</small></div>
+    {% set ep = request.endpoint %}
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}">Übersicht</a>
+    {% if can('documents_view') %}
+    <a href="{{ url_for('documents', kind='offer') }}" class="{{ 'active' if request.path.startswith('/angebote') }}">Angebote</a>
+    <a href="{{ url_for('documents', kind='invoice') }}" class="{{ 'active' if request.path.startswith('/rechnungen') }}">Rechnungen</a>
+    {% endif %}
+    {% if can('bookkeeping_view') %}
+    <a href="{{ url_for('transactions') }}" class="{{ 'active' if ep in ('transactions', 'transaction_edit') }}">Einnahmen &amp; Ausgaben</a>
+    <a href="{{ url_for('inbox') }}" class="{{ 'active' if ep == 'inbox' }}">Belegeingang{% if inbox_count %} <span class="badge invoiced">{{ inbox_count }}</span>{% endif %}</a>
+    {% endif %}
+    {% if can('documents_view') or can('documents_send') %}
+    <a href="{{ url_for('reminders') }}" class="{{ 'active' if ep == 'reminders' }}">Erinnerungen{% if overdue_count %} <span class="badge overdue">{{ overdue_count }}</span>{% endif %}</a>
+    {% endif %}
+    {% if can('bookkeeping_view') %}<a href="{{ url_for('euer') }}" class="{{ 'active' if ep == 'euer' }}">EÜR</a>{% endif %}
+    {% if can('catalog_edit') or can('documents_edit') %}<a href="{{ url_for('products') }}" class="{{ 'active' if ep in ('products', 'product_edit') }}">Produkte &amp; Leistungen</a>{% endif %}
+    {% if can('documents_view') or can('customers_edit') %}<a href="{{ url_for('customers') }}" class="{{ 'active' if ep in ('customers', 'customer_edit') }}">Kunden</a>{% endif %}
+    <div class="sep"></div>
+    {% if can('settings') %}<a href="{{ url_for('settings_view') }}" class="{{ 'active' if ep == 'settings_view' }}">Einstellungen</a>{% endif %}
+    {% if current_user and current_user.is_admin %}<a href="{{ url_for('users') }}" class="{{ 'active' if ep in ('users', 'user_edit', 'audit') }}">Benutzer &amp; Protokoll</a>{% endif %}
+    {% if current_user %}<a href="{{ url_for('account') }}" class="{{ 'active' if ep == 'account' }}">👤 {{ current_user.name }}</a>{% endif %}
+    <a href="{{ url_for('logout') }}">Abmelden</a>
+  </nav>
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block scripts %}{% endblock %}
+<script>
+  const menuBtn = document.getElementById('menu-toggle'), sidebar = document.getElementById('sidebar');
+  menuBtn.addEventListener('click', () => {
+    const open = sidebar.classList.toggle('open');
+    menuBtn.setAttribute('aria-expanded', open);
+    menuBtn.firstChild.textContent = open ? '✕ Schließen' : '☰ Menü';
+  });
+  document.querySelectorAll('tr[data-href]').forEach(tr => {
+    tr.classList.add('clickable');
+    tr.addEventListener('click', e => { if (!e.target.closest('a,button,form')) location.href = tr.dataset.href; });
+  });
+  document.querySelectorAll('form[data-confirm]').forEach(f => {
+    f.addEventListener('submit', e => { if (!confirm(f.dataset.confirm)) e.preventDefault(); });
+  });
+</script>
+</body>
+</html>

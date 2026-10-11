@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ ("Erinnerung zu " ~ d.number) if reminder else (d.kind_label ~ " " ~ d.number ~ " senden") }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if reminder %}Zahlungserinnerung zu {{ d.number }}{% else %}{{ d.kind_label }} {{ d.number }} per E-Mail senden{% endif %}</h1>
+  <a class="btn" href="{{ url_for('document_view', did=d.id) }}">Zurück</a>
+</div>
+<form method="post" id="sendform">
+{% if reminder %}<input type="hidden" name="art" value="erinnerung">
+<div class="flash info">Fällig seit {{ d.due_date|date }} ({{ (today - d.due_date).days }} Tage){% if d.reminder_count %} · bereits {{ d.reminder_count }}× erinnert{% endif %}. Bitte vorher prüfen, ob die Zahlung eingegangen ist.</div>{% endif %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="field"><label>An</label>
+      <input name="to" value="{{ to }}" required placeholder="kunde@example.de" autocomplete="off">
+      {% if not d.customer.email %}
+      <label class="check" style="margin-top:6px"><input type="checkbox" name="save_email" value="1" checked> Adresse beim Kunden speichern</label>
+      {% endif %}
+      <div class="hint">Mehrere Empfänger mit Komma trennen.</div></div>
+    <div class="field"><label>CC (optional)</label><input name="cc" value="{{ cc }}" autocomplete="off"></div>
+    <div class="field"><label>Betreff</label><input name="subject" value="{{ subject }}" required></div>
+    <div class="field"><label>Nachricht</label><textarea name="body" rows="14" required>{{ body }}</textarea></div>
+  </div>
+  <div>
+    <div class="card">
+      <h2>Anhang</h2>
+      <p>📎 <a href="{{ url_for('document_pdf', did=d.id) }}" target="_blank">{{ pdf_name }}</a>
+        {% if einvoice %}<span class="badge paid">E-Rechnung (ZUGFeRD)</span>{% endif %}</p>
+      {% if einvoice %}
+      <label class="check"><input type="checkbox" name="attach_xml" value="1" {{ 'checked' if attach_xml }}> XML-Datei zusätzlich separat anhängen</label>
+      <div class="hint">Nicht nötig – das XML steckt bereits im PDF. Nur anhängen, wenn der Empfänger es ausdrücklich wünscht.</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Absender</h2>
+      <p>{{ settings.mail_from_name or settings.company_name }} &lt;{{ settings.mail_from_address or settings.smtp_user }}&gt;</p>
+      {% if settings.mail_bcc_self %}<p class="hint">Eine Kopie geht als BCC an dich selbst.</p>{% endif %}
+      <p class="hint">Betreff und Text stammen aus den Vorlagen in den <a href="{{ url_for('settings_view') }}#mail">Einstellungen</a>.</p>
+    </div>
+    {% if d.emails %}
+    <div class="card">
+      <h2>Bisher versendet</h2>
+      {% for m in d.emails %}<div class="hint">{{ m.sent_at.strftime('%d.%m.%Y %H:%M') }} · {{ m.recipients }} {% if not m.success %}<span class="badge overdue">fehlgeschlagen</span>{% endif %}</div>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+<div class="actions">
+  <button class="primary" type="submit" id="sendbtn">Jetzt senden</button>
+  <a class="btn" href="{{ url_for('document_view', did=d.id) }}">Abbrechen</a>
+</div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+// Doppeltes Absenden verhindern
+document.getElementById('sendform').addEventListener('submit', () => {
+  const b = document.getElementById('sendbtn'); b.disabled = true; b.textContent = 'Wird gesendet …';
+});
+</script>
+{% endblock %}

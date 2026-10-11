@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ '[TEST] ' if is_test }}{{ "Einrichten" if setup else "Anmelden" }} · {{ settings.company_name or "Buchhaltung" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" crossorigin="use-credentials">
+  <link rel="icon" type="image/png" href="{{ url_for('app_icon', size=192) }}">
+  <link rel="apple-touch-icon" href="{{ url_for('app_icon', size=180) }}">
+  <meta name="theme-color" content="#28466e">
+</head>
+<body>
+{% if is_test %}<div class="test-banner">⚠ TESTUMGEBUNG – Kopie der Daten · E-Mails gehen nur an dich · Paperless nur lesend</div>{% endif %}
+<main style="max-width:400px;margin:10vh auto;padding:16px">
+  <div class="card">
+    <h1 style="margin-bottom:6px">Buchhaltung</h1>
+    <p class="muted" style="margin-top:0">{{ settings.company_name or settings.owner_name }}</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    <form method="post">
+      {% if setup %}
+        <p>Lege das Admin-Konto an. Der Admin darf alles und verwaltet die weiteren Benutzer.</p>
+        <div class="field"><label>Benutzername</label><input name="username" value="admin" required autocomplete="username"></div>
+        <div class="field"><label>Anzeigename</label><input name="display_name" value="{{ settings.owner_name }}"></div>
+        <div class="field"><label>Passwort (mind. 8 Zeichen)</label><input type="password" name="password" required minlength="8" autofocus autocomplete="new-password"></div>
+        <div class="field"><label>Passwort wiederholen</label><input type="password" name="password2" required minlength="8" autocomplete="new-password"></div>
+        <button class="primary" type="submit">Admin anlegen</button>
+      {% else %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="field"><label>Benutzername</label><input name="username" value="{{ username or '' }}" required autocomplete="username" {{ '' if username else 'autofocus' }} autocapitalize="none"></div>
+        <div class="field"><label>Passwort</label><input type="password" name="password" required autocomplete="current-password" {{ 'autofocus' if username }}></div>
+        <label class="check" style="margin-bottom:14px"><input type="checkbox" name="remember" value="1" checked> Angemeldet bleiben (30 Tage)</label>
+        <button class="primary" type="submit">Anmelden</button>
+        <p style="margin:14px 0 0"><a href="{{ url_for('password_forgot') }}">Passwort vergessen?</a></p>
+      {% endif %}
+    </form>
+  </div>
+</main>
+</body>
+</html>

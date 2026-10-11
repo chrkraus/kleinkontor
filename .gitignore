@@ -1,0 +1,10 @@
+*.local.md
+*.log
+*.pyc
+.venv/
+Caddyfile
+__pycache__/
+bin/
+data*/
+data/
+instance.env

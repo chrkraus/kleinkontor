@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ '[TEST] ' if is_test }}Bestätigungscode · {{ settings.company_name or "Buchhaltung" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" crossorigin="use-credentials">
+  <link rel="icon" type="image/png" href="{{ url_for('app_icon', size=192) }}">
+  <link rel="apple-touch-icon" href="{{ url_for('app_icon', size=180) }}">
+  <meta name="theme-color" content="#28466e">
+</head>
+<body>
+{% if is_test %}<div class="test-banner">⚠ TESTUMGEBUNG – Kopie der Daten · E-Mails gehen nur an dich · Paperless nur lesend</div>{% endif %}
+<main style="max-width:400px;margin:10vh auto;padding:16px">
+  <div class="card">
+    <h1 style="margin-bottom:6px">Buchhaltung</h1>
+    <p class="muted" style="margin-top:0">{{ settings.company_name or settings.owner_name }}</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    <h2>Bestätigungscode</h2>
+    <form method="post">
+      <p class="muted">Gib den 6-stelligen Code aus deiner Authenticator-App ein.</p>
+      <div class="field"><label>Code</label><input name="code" required autofocus inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 \-a-fA-F]{6,14}" style="font-size:22px;letter-spacing:4px;text-align:center"></div>
+      <button class="primary" type="submit">Bestätigen</button>
+      <p class="hint" style="margin-top:12px">Handy nicht zur Hand? Statt des Codes einen deiner Wiederherstellungscodes eingeben (Format xxxx-xxxx-xxxx).</p>
+    </form>
+    <p style="margin-top:14px"><a href="{{ url_for('login') }}">← Abbrechen</a></p>
+  </div>
+</main>
+</body>
+</html>

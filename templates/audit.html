@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Protokoll{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Protokoll</h1>
+  <form method="get" class="actions">
+    <select name="benutzer" onchange="this.form.submit()">
+      <option value="">Alle Benutzer</option>
+      {% for n in names %}<option {{ 'selected' if n == user }}>{{ n }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+<div class="card">
+  {% if entries %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Zeitpunkt</th><th>Benutzer</th><th>Aktion</th><th>Details</th></tr></thead>
+    <tbody>
+    {% for e in entries %}
+      <tr>
+        <td style="white-space:nowrap">{{ e.at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+        <td>{{ e.username }}</td>
+        <td>{% if e.object_type == 'document' and e.object_id %}<a href="{{ url_for('document_view', did=e.object_id) }}">{{ e.action }}</a>
+            {% elif e.object_type == 'transaction' and e.object_id %}<a href="{{ url_for('transaction_edit', tid=e.object_id) }}">{{ e.action }}</a>
+            {% else %}{{ e.action }}{% endif %}</td>
+        <td class="muted">{{ e.details }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="actions" style="margin-top:12px">
+    {% if page > 1 %}<a class="btn small" href="{{ url_for('audit', benutzer=user or None, seite=page-1) }}">← Neuere</a>{% endif %}
+    {% if more %}<a class="btn small" href="{{ url_for('audit', benutzer=user or None, seite=page+1) }}">Ältere →</a>{% endif %}
+  </div>
+  {% else %}<div class="empty">Noch keine Einträge.</div>{% endif %}
+</div>
+{% endblock %}

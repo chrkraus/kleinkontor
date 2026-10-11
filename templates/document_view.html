@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ d.kind_label }} {{ d.display_number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ d.kind_label }} {{ d.display_number }}
+    <span class="badge {{ d.status }}">{{ d.status_label }}</span>
+    {% if d.overdue %}<span class="badge overdue">überfällig</span>{% endif %}
+  </h1>
+  <div class="actions">
+    {% if d.overdue and can('documents_send') %}<a class="btn primary" href="{{ url_for('document_send', did=d.id, art='erinnerung') }}">✉ Zahlungserinnerung</a>{% endif %}
+    {% if d.status != "draft" and can('documents_send') %}<a class="btn {{ '' if d.overdue else 'primary' }}" href="{{ url_for('document_send', did=d.id) }}">✉ Per E-Mail senden</a>{% endif %}
+    <a class="btn" href="{{ url_for('document_pdf', did=d.id, download=1) }}">PDF herunterladen</a>
+    {% if d.editable and can('documents_edit') %}
+      <a class="btn" href="{{ url_for('document_edit', did=d.id) }}">Bearbeiten</a>
+      <form class="inline" method="post" action="{{ url_for('document_finalize', did=d.id) }}"
+            data-confirm="Festschreiben? Danach wird eine Nummer vergeben und das Dokument ist nicht mehr änderbar.">
+        <button class="primary">Festschreiben</button></form>
+    {% endif %}
+    {% if can('documents_edit') %}<form class="inline" method="post" action="{{ url_for('document_duplicate', did=d.id) }}"><button>Duplizieren</button></form>{% endif %}
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <dl class="info">
+      <dt>Kunde</dt><dd><a href="{{ url_for('customer_edit', cid=d.customer.id) }}">{{ d.customer.display_name }}</a></dd>
+      {% if d.title %}<dt>Betreff</dt><dd>{{ d.title }}</dd>{% endif %}
+      <dt>Datum</dt><dd>{{ d.issue_date|date }}</dd>
+      {% if d.service_date %}<dt>Leistungsdatum</dt><dd>{{ d.service_date }}</dd>{% endif %}
+      {% if d.due_date %}<dt>{{ "Fällig am" if d.is_invoice else "Gültig bis" }}</dt><dd>{{ d.due_date|date }}</dd>{% endif %}
+      {% if d.created_by %}<dt>Erstellt von</dt><dd>{{ d.created_by }}{% if d.created_at %} · {{ d.created_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}</dd>{% endif %}
+      {% if d.finalized_by %}<dt>Festgeschrieben</dt><dd>{{ d.finalized_by }} · {{ d.finalized_at.strftime('%d.%m.%Y %H:%M') }}</dd>{% endif %}
+      <dt>Steuer</dt><dd>{{ "Kleinunternehmer (§ 19 UStG)" if d.small_business else "mit Umsatzsteuer" }}</dd>
+      {% set t = d.totals() %}
+      {% if not d.small_business %}<dt>Netto</dt><dd>{{ t.net|money }}</dd>
+        {% for r, v in t.vat.items() %}<dt>USt {{ r }} %</dt><dd>{{ v|money }}</dd>{% endfor %}{% endif %}
+      <dt>Gesamt</dt><dd><strong>{{ t.gross|money }}</strong></dd>
+      {% if d.has_skonto %}<dt>Skonto</dt><dd>{{ d.skonto_percent_label }} bis {{ d.skonto_date|date }} → {{ (d.gross - d.skonto_amount)|money }}
+        {% if d.status == "sent" and d.skonto_date < today %}<span class="muted">(abgelaufen)</span>{% endif %}</dd>{% endif %}
+      {% if d.paid_date %}<dt>Bezahlt am</dt><dd>{{ d.paid_date|date }}</dd>{% endif %}
+      {% if d.reminder_count %}<dt>Erinnerungen</dt><dd>{{ d.reminder_count }}× · zuletzt {{ d.last_reminder_at.strftime('%d.%m.%Y') }}</dd>{% endif %}
+      {% if d.offer %}<dt>Aus Angebot</dt><dd><a href="{{ url_for('document_view', did=d.offer.id) }}">{{ d.offer.number }}</a></dd>{% endif %}
+      {% if d.cancels %}<dt>Storniert</dt><dd><a href="{{ url_for('document_view', did=d.cancels.id) }}">{{ d.cancels.number }}</a></dd>{% endif %}
+      {% if storno %}<dt>Stornorechnung</dt><dd><a href="{{ url_for('document_view', did=storno.id) }}">{{ storno.number }}</a></dd>{% endif %}
+      {% for inv in invoices %}<dt>Rechnung</dt><dd><a href="{{ url_for('document_view', did=inv.id) }}">{{ inv.display_number }}</a> ({{ inv.status_label }})</dd>{% endfor %}
+      {% if d.is_invoice and d.status != "draft" %}<dt>E-Rechnung</dt><dd>
+        {% if not settings.einvoice_enabled %}<span class="muted">deaktiviert (Einstellungen)</span>
+        {% elif einvoice_missing %}<span class="badge overdue">nicht möglich</span> <span class="muted">– fehlt: {{ einvoice_missing|join(", ") }}</span>
+        {% else %}<span class="badge paid">ZUGFeRD EN 16931</span> · <a href="{{ url_for('document_xml', did=d.id) }}">XML herunterladen</a>{% endif %}
+      </dd>{% endif %}
+      {% if d.paperless_document_id %}<dt>Paperless</dt><dd>
+        <a href="{{ url_for('paperless_link', pid=d.paperless_document_id) }}" target="_blank">Dokument #{{ d.paperless_document_id }}</a></dd>
+      {% elif d.paperless_task_id %}<dt>Paperless</dt><dd class="muted">wird verarbeitet …</dd>{% endif %}
+    </dl>
+  </div>
+
+  <div class="card">
+    <h2>Aktionen</h2>
+    {% if not can('documents_edit') %}
+      <p class="muted">Du hast nur Leserechte für Angebote und Rechnungen.</p>
+    {% elif d.status == "draft" %}
+      <p class="muted">Entwurf – noch ohne Nummer. Nach dem Festschreiben kann das Dokument versendet werden.</p>
+      <form method="post" action="{{ url_for('document_delete', did=d.id) }}" data-confirm="Entwurf löschen?">
+        <button class="danger">Entwurf löschen</button></form>
+    {% elif not d.is_invoice %}
+      <div class="actions">
+        {% if d.status in ("sent", "accepted") %}
+        <form class="inline" method="post" action="{{ url_for('offer_to_invoice', did=d.id) }}"><button class="primary">In Rechnung umwandeln</button></form>
+        {% endif %}
+        {% if d.status == "sent" %}
+        <form class="inline" method="post" action="{{ url_for('document_status', did=d.id) }}"><input type="hidden" name="status" value="accepted"><button>Angenommen</button></form>
+        <form class="inline" method="post" action="{{ url_for('document_status', did=d.id) }}"><input type="hidden" name="status" value="rejected"><button class="danger">Abgelehnt</button></form>
+        {% elif d.status in ("accepted", "rejected") %}
+        <form class="inline" method="post" action="{{ url_for('document_status', did=d.id) }}"><input type="hidden" name="status" value="sent"><button>Zurück auf „Versendet“</button></form>
+        {% endif %}
+      </div>
+    {% else %}
+      {% if d.status == "sent" %}
+      <form method="post" action="{{ url_for('invoice_paid', did=d.id) }}" class="field">
+        <div class="form-row">
+          <div><label>Zahlungseingang am</label><input type="date" name="paid_date" value="{{ today.isoformat() }}"></div>
+          <div><label>Zahlungsart</label><select name="payment_method"><option>Überweisung</option><option>Bar</option><option>PayPal</option><option>Karte</option><option>Sonstige</option></select></div>
+        </div>
+        {% if d.has_skonto %}
+        <label class="check" style="margin-top:8px"><input type="checkbox" name="with_skonto" value="1" {{ 'checked' if d.skonto_date >= today }}>
+          mit {{ d.skonto_percent_label }} Skonto bezahlt ({{ (d.gross - d.skonto_amount)|money }} statt {{ d.gross|money }})</label>
+        {% endif %}
+        <p><button class="primary">{{ "Erstattung als erfolgt markieren" if d.cancels_id else "Als bezahlt markieren" }}</button></p>
+        <div class="hint">Erzeugt automatisch eine Einnahme in der Buchhaltung (Zuflussprinzip).</div>
+      </form>
+      {% elif d.status == "paid" %}
+      <p>Bezahlt am {{ d.paid_date|date }}.</p>
+      {% for p in payments %}<div class="hint">Buchung: <a href="{{ url_for('transaction_edit', tid=p.id) }}">{{ p.date|date }} · {{ p.gross_amount|money }}</a></div>{% endfor %}
+      <form method="post" action="{{ url_for('invoice_unpaid', did=d.id) }}" data-confirm="Zahlung zurücknehmen? Die zugehörige Einnahme wird gelöscht." style="margin-top:10px">
+        <button class="small">Zahlung zurücknehmen</button></form>
+      {% endif %}
+      {% if d.status in ("sent", "paid") and not d.cancels_id %}
+      <form method="post" action="{{ url_for('invoice_cancel', did=d.id) }}" style="margin-top:14px"
+            data-confirm="Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt.">
+        <button class="danger small">Rechnung stornieren</button></form>
+      {% endif %}
+    {% endif %}
+    {% if paperless_enabled and d.status != "draft" and can('documents_edit') %}
+      <form method="post" action="{{ url_for('document_to_paperless', did=d.id) }}" style="margin-top:14px">
+        <button class="small">{{ "Erneut an" if d.paperless_document_id else "PDF an" }} Paperless senden</button></form>
+    {% endif %}
+  </div>
+</div>
+
+{% if d.emails %}
+<div class="card">
+  <h2>E-Mail-Versand</h2>
+  <table>
+    <thead><tr><th>Zeitpunkt</th><th>Empfänger</th><th>Betreff</th><th>Anhänge</th><th>Status</th></tr></thead>
+    <tbody>{% for m in d.emails %}
+      <tr><td>{{ m.sent_at.strftime('%d.%m.%Y %H:%M') }}{% if m.kind == 'reminder' %} <span class="badge invoiced">Erinnerung{{ ' (auto)' if m.automatic }}</span>{% endif %}</td><td>{{ m.recipients }}</td><td>{{ m.subject }}</td><td class="muted">{{ m.attachments }}</td>
+        <td>{% if m.success %}<span class="badge paid">versendet</span>{% if m.sent_by %} <span class="muted">von {{ m.sent_by }}</span>{% endif %}{% else %}<span class="badge overdue" title="{{ m.error }}">fehlgeschlagen</span><div class="hint">{{ m.error }}</div>{% endif %}</td></tr>
+    {% endfor %}</tbody>
+  </table>
+</div>
+{% endif %}
+
+<iframe class="pdf" src="{{ url_for('document_pdf', did=d.id) }}"></iframe>
+{% endblock %}

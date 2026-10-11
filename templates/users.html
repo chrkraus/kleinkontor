@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Benutzer{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Benutzer</h1>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('audit') }}">Protokoll</a>
+    <a class="btn primary" href="{{ url_for('user_edit') }}">+ Neuer Benutzer</a>
+  </div>
+</div>
+<div class="card">
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Benutzer</th><th>Rolle / Rechte</th><th>Status</th><th>Letzte Anmeldung</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr data-href="{{ url_for('user_edit', uid=u.id) }}" {% if not u.active %}class="muted"{% endif %}>
+        <td><strong>{{ u.name }}</strong> <span class="muted">({{ u.username }})</span>{% if current_user and u.id == current_user.id %} <span class="badge">du</span>{% endif %}
+          {% if u.email %}<div class="hint">{{ u.email }}</div>{% else %}<div class="hint">keine E-Mail – „Passwort vergessen“ nicht möglich</div>{% endif %}</td>
+        <td>{% if u.is_admin %}<span class="badge paid">Admin – alles</span>{% else %}
+          {% for key, label in permissions.items() if key in u.permission_set %}<span class="badge" title="{{ label }}" style="margin:1px">{{ label.split(' (')[0].split(',')[0] }}</span>{% else %}<span class="muted">keine Rechte</span>{% endfor %}{% endif %}</td>
+        <td>{% if u.active %}<span class="badge paid">aktiv</span>{% else %}<span class="badge draft">deaktiviert</span>{% endif %}
+          {% if u.must_change_password %}<span class="badge invoiced" title="Hat das vorläufige Passwort noch nicht ersetzt">Erstanmeldung offen</span>{% endif %}
+          {% if u.totp_enabled %}<span class="badge paid" title="Zwei-Faktor-Anmeldung aktiv">2FA</span>{% else %}<span class="badge overdue" title="Keine Zwei-Faktor-Anmeldung">ohne 2FA</span>{% endif %}</td>
+        <td>{{ u.last_login_at.strftime('%d.%m.%Y %H:%M') if u.last_login_at else '–' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

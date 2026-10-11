@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ u.name if u.id else "Neuer Benutzer" }}{% endblock %}
+{% block content %}
+<h1>{{ u.name if u.id else "Neuer Benutzer" }}</h1>
+<form method="post">
+<div class="grid grid-2">
+  <div class="card">
+    <div class="form-row">
+      <div class="field"><label>Benutzername (zum Anmelden)</label><input name="username" value="{{ u.username or '' }}" required autocapitalize="none" placeholder="z. B. anna"></div>
+      <div class="field"><label>Anzeigename</label><input name="display_name" value="{{ u.display_name or '' }}" placeholder="z. B. Anna Beispiel"></div>
+    </div>
+    <div class="field"><label>E-Mail-Adresse (für „Passwort vergessen“)</label><input type="email" name="email" value="{{ u.email or '' }}"></div>
+    {% if not u.id %}
+    <div class="field">
+      <label>Passwort</label>
+      <label class="check"><input type="radio" name="invite" value="" checked onchange="toggleInvite()"> Vorläufiges Passwort vergeben</label>
+      <label class="check"><input type="radio" name="invite" value="1" onchange="toggleInvite()" {{ 'disabled' if not invite_ok }}> Einladung per E-Mail – der Benutzer legt sein Passwort selbst fest{% if not invite_ok %} <span class="muted">(E-Mail-Versand/Adresse der App fehlt)</span>{% endif %}</label>
+    </div>
+    {% endif %}
+    <div id="pw-fields">
+    <div class="form-row">
+      <div class="field"><label>{{ "Neues Passwort (leer = unverändert)" if u.id else "Vorläufiges Passwort (mind. 8 Zeichen)" }}</label>
+        <input type="password" name="password" id="pw1" autocomplete="new-password" {{ '' if u.id else 'required minlength=8' }}></div>
+      <div class="field"><label>Passwort wiederholen</label><input type="password" name="password2" autocomplete="new-password"></div>
+    </div>
+    {% if not (u.id and current_user and u.id == current_user.id) %}
+    <label class="check"><input type="checkbox" name="must_change" value="1" checked> Benutzer muss bei der nächsten Anmeldung ein eigenes Passwort festlegen</label>
+    {% endif %}
+    {% if u.must_change_password %}<p class="hint">Dieser Benutzer hat das vorläufige Passwort noch nicht ersetzt.</p>{% endif %}
+    </div>
+    <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if u.active }}> aktiv (darf sich anmelden)</label>
+    {% if u.id %}<p>Zwei-Faktor: {% if u.totp_enabled %}<span class="badge paid">aktiv</span>
+      <label class="check" style="margin-top:6px"><input type="checkbox" name="reset_2fa" value="1"> Zwei-Faktor zurücksetzen (z. B. bei verlorenem Handy – der Benutzer richtet sie danach neu ein)</label>
+      {% else %}<span class="badge draft">nicht eingerichtet</span>{% endif %}</p>{% endif %}
+    <p class="hint">Benutzer werden nicht gelöscht, sondern deaktiviert – so bleibt im Protokoll nachvollziehbar, wer was getan hat.</p>
+  </div>
+  <div class="card">
+    <h2>Rechte</h2>
+    <label class="check" style="margin-bottom:12px"><input type="checkbox" name="is_admin" value="1" id="is_admin" {{ 'checked' if u.is_admin }}> <strong>Admin</strong> – darf alles, inkl. Benutzerverwaltung und Protokoll</label>
+    <div id="perms">
+    {% for key, label in permissions.items() %}
+      <label class="check" style="margin-bottom:8px"><input type="checkbox" name="perm_{{ key }}" value="1" {{ 'checked' if key in u.permission_set }}> {{ label }}</label>
+    {% endfor %}
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button type="button" class="small" onclick="preset(['documents_view','documents_edit','documents_send','customers_edit','catalog_edit','bookkeeping_view','bookkeeping_edit'])">Vorlage: Mitarbeiter</button>
+      <button type="button" class="small" onclick="preset(['documents_view','bookkeeping_view'])">Vorlage: Nur lesen</button>
+      <button type="button" class="small" onclick="preset([])">Keine</button>
+    </div>
+  </div>
+</div>
+<div class="actions">
+  <button class="primary" type="submit">Speichern</button>
+  <a class="btn" href="{{ url_for('users') }}">Abbrechen</a>
+</div>
+</form>
+{% if u.id and delete_blockers is defined %}
+<div class="card" style="margin-top:20px">
+  <h2>Benutzer löschen</h2>
+  {% if delete_blockers %}
+    <p class="muted">Löschen ist nicht möglich: {{ delete_blockers|join("; ") }}.</p>
+    <p class="hint">Damit nachvollziehbar bleibt, wer was getan hat (GoBD), lassen sich nur unbenutzte Konten löschen. Deaktiviere den Benutzer stattdessen oben über „aktiv“.</p>
+  {% else %}
+    <p class="muted">Dieses Konto wurde noch nicht für Buchhaltungsaktionen verwendet und kann endgültig gelöscht werden.</p>
+    <form method="post" action="{{ url_for('user_delete', uid=u.id) }}" data-confirm="Benutzer „{{ u.name }}“ endgültig löschen?">
+      <button class="danger">Benutzer endgültig löschen</button></form>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+const adminBox = document.getElementById('is_admin'), perms = document.getElementById('perms');
+function syncAdmin() { perms.querySelectorAll('input').forEach(i => i.disabled = adminBox.checked); perms.style.opacity = adminBox.checked ? .5 : 1; }
+function preset(keys) { adminBox.checked = false; perms.querySelectorAll('input').forEach(i => i.checked = keys.includes(i.name.slice(5))); syncAdmin(); }
+adminBox.addEventListener('change', syncAdmin); syncAdmin();
+function toggleInvite() {
+  const inv = document.querySelector('input[name=invite]:checked');
+  const on = inv && inv.value === '1';
+  document.getElementById('pw-fields').style.display = on ? 'none' : '';
+  const pw1 = document.getElementById('pw1'); if (pw1 && !{{ 'true' if u.id else 'false' }}) pw1.required = !on;
+}
+</script>
+{% endblock %}

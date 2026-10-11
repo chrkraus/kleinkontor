@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Einnahmen &amp; Ausgaben{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Einnahmen &amp; Ausgaben {{ year }}</h1>
+  <div class="actions">
+    {% if can('bookkeeping_edit') %}<a class="btn" href="{{ url_for('transaction_edit', art='income') }}">+ Einnahme</a>{% endif %}
+    {% if can('bookkeeping_edit') %}<a class="btn primary" href="{{ url_for('transaction_edit', art='expense') }}">+ Ausgabe</a>{% endif %}
+  </div>
+</div>
+<form method="get" class="filters">
+  <select name="jahr" onchange="this.form.submit()">
+    {% for y in years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
+  </select>
+  <select name="art" onchange="this.form.submit()">
+    <option value="">Einnahmen &amp; Ausgaben</option>
+    <option value="income" {{ 'selected' if kind == 'income' }}>Nur Einnahmen</option>
+    <option value="expense" {{ 'selected' if kind == 'expense' }}>Nur Ausgaben</option>
+  </select>
+  <select name="kategorie" onchange="this.form.submit()">
+    <option value="">Alle Kategorien</option>
+    {% for c in categories %}<option {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}
+  </select>
+</form>
+<div class="grid grid-3">
+  <div class="card stat"><div class="label">Einnahmen (brutto)</div><div class="value pos">{{ income|money }}</div></div>
+  <div class="card stat"><div class="label">Ausgaben (brutto)</div><div class="value neg">{{ expense|money }}</div></div>
+  <div class="card stat"><div class="label">Saldo</div><div class="value">{{ (income - expense)|money }}</div></div>
+</div>
+<div class="card">
+  {% if items %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Datum</th><th class="hm">Art</th><th class="hm">Kategorie</th><th>Beschreibung</th><th class="hm">Partner</th><th>Beleg</th><th class="num hm">USt</th><th class="num">Brutto</th></tr></thead>
+    <tbody>
+    {% for t in items %}
+      <tr data-href="{{ url_for('transaction_edit', tid=t.id) }}">
+        <td>{{ t.date|date }}</td>
+        <td class="hm"><span class="badge {{ t.kind }}">{{ 'Einnahme' if t.kind == 'income' else 'Ausgabe' }}</span></td>
+        <td class="hm">{{ t.category }}</td>
+        <td>{{ t.description }}{% if t.document %} <a href="{{ url_for('document_view', did=t.document.id) }}" class="muted">↗</a>{% endif %}
+          <div class="sm-only muted">{{ t.counterparty ~ ' · ' if t.counterparty }}{{ t.category }}</div></td>
+        <td class="hm">{{ t.counterparty }}</td>
+        <td>
+          {% if t.paperless_document_id %}<a href="{{ url_for('paperless_document', pid=t.paperless_document_id) }}" target="_blank" title="Beleg anzeigen">📄 #{{ t.paperless_document_id }}</a>
+          {% elif t.paperless_task_id %}<span class="muted">⏳</span>
+          {% elif t.kind == 'expense' %}<span class="badge overdue" title="Kein Beleg verknüpft">fehlt</span>{% endif %}
+        </td>
+        <td class="num hm">{{ t.vat_amount|money if t.vat_rate else '–' }}</td>
+        <td class="num amt-{{ t.kind }}">{{ ('' if t.kind == 'income' else '−') ~ (t.gross_amount|money) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<div class="empty">Keine Buchungen in diesem Zeitraum.</div>{% endif %}
+</div>
+{% endblock %}

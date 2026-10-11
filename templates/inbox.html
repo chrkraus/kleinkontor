@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Belegeingang{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Belegeingang</h1>
+  <div class="actions">
+    <a class="btn {{ 'primary' if status == 'pending' }}" href="{{ url_for('inbox') }}">Offen</a>
+    <a class="btn {{ 'primary' if status == 'booked' }}" href="{{ url_for('inbox', status='booked') }}">Gebucht</a>
+    <a class="btn {{ 'primary' if status == 'ignored' }}" href="{{ url_for('inbox', status='ignored') }}">Ignoriert</a>
+    {% if can('bookkeeping_edit') %}<form method="post" action="{{ url_for('inbox_sync') }}" class="inline"><button>↻ Jetzt abrufen</button></form>{% endif %}
+  </div>
+</div>
+
+{% if not paperless_enabled %}
+<div class="flash info">Paperless ist nicht verbunden – bitte in den <a href="{{ url_for('settings_view') }}">Einstellungen</a> einrichten.</div>
+{% elif not settings.paperless_inbox_enabled %}
+<div class="flash info">Der automatische Abruf ist ausgeschaltet (Einstellungen → Belegeingang).</div>
+{% endif %}
+<p class="muted">Dokumente mit dem Paperless-Tag <strong>„{{ settings.paperless_inbox_tag }}“</strong> landen hier automatisch (alle 15 Minuten{% if settings.last_paperless_sync_at %}, zuletzt {{ settings.last_paperless_sync_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}). Eigene Ausgangsrechnungen werden übersprungen. Betrag, Kategorie und Datum sind Vorschläge – bitte prüfen. Für die EÜR zählt das <strong>Zahlungsdatum</strong>.</p>
+{% if settings.paperless_sync_error %}<div class="flash error">Letzter Abruf: {{ settings.paperless_sync_error }}</div>{% endif %}
+
+{% if not items %}
+<div class="card"><div class="empty">{{ "Keine offenen Belege – alles erledigt." if status == "pending" else "Keine Einträge." }}</div></div>
+{% endif %}
+
+{% for r in items %}
+<div class="card" id="beleg-{{ r.id }}">
+  <div class="page-head" style="margin-bottom:10px">
+    <h2 style="margin:0">{{ r.correspondent or r.title }}</h2>
+    <div class="actions">
+      <a class="btn small" href="{{ url_for('paperless_document', pid=r.paperless_id) }}" target="_blank">📄 Beleg ansehen</a>
+      <a class="btn small" href="{{ url_for('paperless_link', pid=r.paperless_id) }}" target="_blank">in Paperless #{{ r.paperless_id }}</a>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:0">{{ r.title }}{% if r.document_type %} · {{ r.document_type }}{% endif %}{% if r.doc_date %} · Belegdatum {{ r.doc_date|date }}{% endif %}
+    {% if r.excerpt %}<br>Betrag erkannt aus: „{{ r.excerpt }}“{% elif r.amount is none %}<br><span class="badge overdue">Betrag nicht erkannt</span>{% endif %}</p>
+  {% if status == "pending" %}
+  <form method="post" action="{{ url_for('inbox_book', rid=r.id) }}">
+    <div class="form-row">
+      <div class="field"><label>Art</label>
+        <select name="kind" onchange="toggleCats(this)">
+          <option value="expense" {{ 'selected' if r.kind == 'expense' }}>Ausgabe</option>
+          <option value="income" {{ 'selected' if r.kind == 'income' }}>Einnahme</option>
+        </select></div>
+      <div class="field"><label>Zahlungsdatum</label><input type="date" name="date" value="{{ (r.doc_date or today).isoformat() }}" required></div>
+      <div class="field"><label>Betrag brutto (€)</label><input name="amount" value="{{ r.amount|money(false) if r.amount else '' }}" inputmode="decimal" required placeholder="0,00"></div>
+      <div class="field"><label>Enthaltene USt</label>
+        <select name="vat_rate">{% for v in (0, 7, 19) %}<option value="{{ v }}" {{ 'selected' if r.vat_rate == v }}>{{ v }} %</option>{% endfor %}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Kategorie</label>
+        <select name="category" class="cat-expense" {{ 'disabled hidden' if r.kind == 'income' }}>
+          {% for c in expense_categories %}<option {{ 'selected' if c == r.category }}>{{ c }}</option>{% endfor %}</select>
+        <select name="category" class="cat-income" {{ 'disabled hidden' if r.kind != 'income' }}>
+          {% for c in income_categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Geschäftspartner</label><input name="counterparty" value="{{ r.correspondent }}"></div>
+      <div class="field"><label>Beschreibung</label><input name="description" value="{{ r.title }}"></div>
+      <div class="field"><label>Zahlungsart</label>
+        <select name="payment_method">{% for p in ("Überweisung", "Lastschrift", "Karte", "Bar", "PayPal", "Sonstige") %}<option>{{ p }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="actions">
+      {% if can('bookkeeping_edit') %}<button class="primary" type="submit">✓ Buchen</button>{% endif %}
+      {% if can('bookkeeping_edit') %}<button type="submit" formaction="{{ url_for('inbox_ignore', rid=r.id) }}" formnovalidate title="Kein Geschäftsbeleg">Ignorieren</button>{% endif %}
+    </div>
+  </form>
+  {% elif status == "booked" and r.transaction %}
+    <p>Gebucht als <a href="{{ url_for('transaction_edit', tid=r.transaction.id) }}">{{ r.transaction.category }} · {{ r.transaction.date|date }} · {{ r.transaction.gross_amount|money }}</a></p>
+  {% elif status == "ignored" %}
+    <form method="post" action="{{ url_for('inbox_ignore', rid=r.id) }}"><button class="small">Zurück in den Eingang</button></form>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleCats(sel) {
+  const form = sel.closest('form'), income = sel.value === 'income';
+  const ci = form.querySelector('.cat-income'), ce = form.querySelector('.cat-expense');
+  ci.hidden = ci.disabled = !income;
+  ce.hidden = ce.disabled = income;
+}
+</script>
+{% endblock %}

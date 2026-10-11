@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Produkte &amp; Leistungen{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Produkte &amp; Leistungen</h1>
+  <div class="actions">
+    {% if can('catalog_edit') %}<a class="btn" href="{{ url_for('product_edit', art='product') }}">+ Produkt</a>{% endif %}
+    {% if can('catalog_edit') %}<a class="btn primary" href="{{ url_for('product_edit', art='service') }}">+ Dienstleistung</a>{% endif %}
+  </div>
+</div>
+
+{% if total == 0 %}
+<div class="card">
+  <h2>Noch keine Einträge</h2>
+  <p>Lege hier alles an, was du regelmäßig anbietest: Hardware wie Access Points, Kameras und Switches sowie Dienstleistungen wie Montage, Einrichtung, Arbeitszeit oder Anfahrt. In Angeboten und Rechnungen fügst du sie dann mit einem Klick ein.</p>
+  <form method="post" action="{{ url_for('products_starter') }}">
+    {% if can('catalog_edit') %}<button>Typische Einträge für Netzwerktechnik anlegen</button>{% endif %}
+    <span class="hint">z. B. Montage Access Point, Einrichtung IP-Kamera, Arbeitszeit, Anfahrt – ohne Preise, die trägst du selbst ein.</span>
+  </form>
+</div>
+{% else %}
+<form method="get" class="filters">
+  <input name="q" value="{{ q }}" placeholder="Suchen (Name, Art.-Nr., Hersteller) …" style="width:260px">
+  <select name="art" onchange="this.form.submit()">
+    <option value="">Produkte &amp; Dienstleistungen</option>
+    {% for k, label in kinds.items() %}<option value="{{ k }}" {{ 'selected' if k == kind }}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="kategorie" onchange="this.form.submit()">
+    <option value="">Alle Kategorien</option>
+    {% for c in categories %}<option {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}
+  </select>
+  <label class="check"><input type="checkbox" name="inaktiv" value="1" {{ 'checked' if show_inactive }} onchange="this.form.submit()"> inaktive zeigen</label>
+</form>
+<div class="card">
+  {% if items %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Art</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Kategorie</th><th>Einheit</th>
+      <th class="num">Preis{% if not settings.small_business %} netto{% endif %}</th><th class="num">EK</th><th class="num">Marge</th><th class="num">Verkauft</th></tr></thead>
+    <tbody>
+    {% for p in items %}
+      {% set st = stats.get(p.id) %}
+      <tr data-href="{{ url_for('product_edit', pid=p.id) }}" {% if not p.active %}class="muted"{% endif %}>
+        <td><span class="badge {{ 'invoiced' if p.kind == 'product' else '' }}">{{ p.kind_label }}</span></td>
+        <td>{{ p.sku }}</td>
+        <td>{% if p.manufacturer %}<span class="muted">{{ p.manufacturer }}</span> {% endif %}{{ p.name }}{% if not p.active %} <span class="badge draft">inaktiv</span>{% endif %}
+          {% if not p.unit_price %}<span class="badge overdue" title="Noch kein Preis hinterlegt">Preis fehlt</span>{% endif %}</td>
+        <td>{{ p.category }}</td>
+        <td>{{ p.unit }}</td>
+        <td class="num">{{ p.unit_price|money }}</td>
+        <td class="num">{{ p.purchase_price|money if p.purchase_price else '–' }}</td>
+        <td class="num">{% if p.margin_percent is not none %}{{ p.margin|money }} <span class="muted">({{ p.margin_percent|round|int }} %)</span>{% else %}–{% endif %}</td>
+        <td class="num">{% if st %}{{ st.qty|qty }} × <span class="muted">in {{ st.count }} Rg.</span>{% else %}–{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<div class="empty">Keine Einträge gefunden.</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

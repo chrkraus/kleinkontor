@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}EÜR {{ year }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Einnahmen-Überschuss-Rechnung {{ year }}</h1>
+  <div class="actions">
+    <form method="get"><select name="jahr" onchange="this.form.submit()">
+      {% for y in years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
+    </select></form>
+    <a class="btn primary" href="{{ url_for('euer_csv', year=year) }}">CSV-Export</a>
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card stat"><div class="label">Betriebseinnahmen</div><div class="value">{{ total_income|money }}</div></div>
+  <div class="card stat"><div class="label">Betriebsausgaben</div><div class="value">{{ total_expense|money }}</div></div>
+  <div class="card stat"><div class="label">{{ "Gewinn" if profit >= 0 else "Verlust" }}</div><div class="value {{ 'pos' if profit >= 0 else 'neg' }}">{{ profit|money }}</div></div>
+</div>
+
+<div class="card">
+  <div class="page-head" style="margin-bottom:0"><h2>Monatsverlauf (brutto)</h2><div class="legend"><span class="in">Einnahmen</span><span class="out">Ausgaben</span></div></div>
+  {% set maxv = [months|map(attribute='income')|max, months|map(attribute='expense')|max, 1]|max %}
+  <div class="bars">
+    {% for m in months %}
+    <div class="m">
+      <div class="pair">
+        <div class="b in" style="height: {{ (m.income / maxv * 100)|round(1) }}%" title="Einnahmen: {{ m.income|money }}"></div>
+        <div class="b out" style="height: {{ (m.expense / maxv * 100)|round(1) }}%" title="Ausgaben: {{ m.expense|money }}"></div>
+      </div>
+      <div class="lbl">{{ ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"][m.month - 1] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Betriebseinnahmen</h2>
+    <table>
+      <tbody>{% for cat, amount in income_cats %}<tr><td><a href="{{ url_for('transactions', jahr=year, kategorie=cat) }}">{{ cat }}</a></td><td class="num">{{ amount|money }}</td></tr>{% else %}<tr><td class="muted" colspan="2">Keine Einnahmen</td></tr>{% endfor %}</tbody>
+      <tfoot><tr><td>Summe</td><td class="num">{{ total_income|money }}</td></tr></tfoot>
+    </table>
+  </div>
+  <div class="card">
+    <h2>Betriebsausgaben</h2>
+    <table>
+      <tbody>{% for cat, amount in expense_cats %}<tr><td><a href="{{ url_for('transactions', jahr=year, kategorie=cat) }}">{{ cat }}</a></td><td class="num">{{ amount|money }}</td></tr>{% else %}<tr><td class="muted" colspan="2">Keine Ausgaben</td></tr>{% endfor %}</tbody>
+      <tfoot><tr><td>Summe</td><td class="num">{{ total_expense|money }}</td></tr></tfoot>
+    </table>
+  </div>
+</div>
+
+{% if has_vat %}
+<div class="card">
+  <h2>Umsatzsteuer je Quartal</h2>
+  <table>
+    <thead><tr><th>Quartal</th><th class="num">Vereinnahmte USt</th><th class="num">Vorsteuer</th><th class="num">Zahllast</th></tr></thead>
+    <tbody>
+    {% for q, v in quarters.items() %}
+      <tr><td>Q{{ q }}</td><td class="num">{{ v.vat|money }}</td><td class="num">{{ v.input|money }}</td><td class="num">{{ (v.vat - v.input)|money }}</td></tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><td>Jahr</td><td class="num">{{ vat_collected|money }}</td><td class="num">{{ vat_paid|money }}</td><td class="num">{{ (vat_collected - vat_paid)|money }}</td></tr></tfoot>
+  </table>
+  <p class="hint">Hilfestellung für die Umsatzsteuer-Voranmeldung. An das Finanzamt gezahlte bzw. erstattete USt als Ausgabe „An das Finanzamt gezahlte USt“ bzw. Einnahme „Umsatzsteuer-Erstattung“ erfassen.</p>
+</div>
+{% endif %}
+
+<div class="card" id="anlage">
+  <div class="page-head" style="margin-bottom:8px">
+    <h2 style="margin:0">Ausfüllhilfe Anlage EÜR {{ year }}</h2>
+    <span class="muted">Zeilen laut amtlichem Vordruck {{ anlage.form_year }}</span>
+  </div>
+  {% if anlage.form_year != year %}
+  <div class="flash info">Für {{ year }} ist noch kein Vordruck hinterlegt. Die Zeilennummern stammen aus dem Vordruck {{ anlage.form_year }} und können abweichen. Bitte mit dem Formular in ELSTER abgleichen.</div>
+  {% endif %}
+  <p class="muted">Übertrage die Beträge in <strong>Mein ELSTER → Formulare &amp; Leistungen → Einkommensteuer {{ year }} → Anlage EÜR</strong>. Ein Klick auf einen Betrag kopiert ihn. Felder ohne Betrag bleiben leer.</p>
+  {% if anlage.unmapped %}
+  <div class="flash error">Diese Kategorien sind keiner Zeile zugeordnet und wurden unter „Übrige Betriebsausgaben“ erfasst: {{ anlage.unmapped.keys()|join(", ") }}</div>
+  {% endif %}
+  {% if not anlage.count %}
+  <div class="empty">Keine Buchungen in {{ year }}.</div>
+  {% else %}
+  <div class="table-wrap">
+  <table class="anlage">
+    <thead><tr><th class="num">Zeile</th><th class="num">Kz.</th><th>Bezeichnung im Vordruck</th><th>Enthält</th><th class="num">Betrag</th></tr></thead>
+    <tbody>
+      <tr class="section"><td colspan="5">1. Betriebseinnahmen</td></tr>
+      {% for r in anlage.income %}{% include "_anlage_row.html" %}{% endfor %}
+      <tr class="sum"><td class="num">{{ anlage.sum_in.line }}</td><td class="num">{{ anlage.sum_in.kz }}</td><td>Summe Betriebseinnahmen</td><td></td>
+        <td class="num"><button type="button" class="copy" data-v="{{ anlage.sum_in.amount|money(false) }}">{{ anlage.sum_in.amount|money }}</button></td></tr>
+      <tr class="section"><td colspan="5">2. Betriebsausgaben</td></tr>
+      {% for r in anlage.expenses %}{% include "_anlage_row.html" %}{% endfor %}
+      <tr class="sum"><td class="num">{{ anlage.sum_out.line }}</td><td class="num">{{ anlage.sum_out.kz }}</td><td>Summe Betriebsausgaben</td><td></td>
+        <td class="num"><button type="button" class="copy" data-v="{{ anlage.sum_out.amount|money(false) }}">{{ anlage.sum_out.amount|money }}</button></td></tr>
+      <tr class="sum"><td class="num">{{ anlage.profit.line }}</td><td class="num">{{ anlage.profit.kz }}</td><td>Steuerpflichtiger Gewinn/Verlust</td><td></td>
+        <td class="num"><button type="button" class="copy" data-v="{{ anlage.profit.amount|money(false) }}">{{ anlage.profit.amount|money }}</button></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="hint">ELSTER berechnet die Summen selbst. Vergleiche sie mit den Werten hier, um Tippfehler zu erkennen.
+    {% if settings.small_business %}Als Kleinunternehmer werden Ausgaben mit dem Bruttobetrag angesetzt, weil es keinen Vorsteuerabzug gibt.{% endif %}
+    Fehlen Angaben wie Abschreibungen, Fahrten mit dem Privat-Pkw oder die Homeoffice-Pauschale, müssen sie als Buchung erfasst werden, damit sie hier erscheinen.</p>
+  {% endif %}
+</div>
+
+<p class="hint">Hinweis: Die Übersicht ist eine Hilfe für die Anlage EÜR und ersetzt keine steuerliche Beratung. Abschreibungen (AfA) über mehrere Jahre bitte jährlich als Ausgabe „Abschreibungen (AfA)“ mit dem jeweiligen Jahresbetrag erfassen.</p>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('button.copy').forEach(b => b.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(b.dataset.v); }
+  catch (e) { const t = document.createElement('textarea'); t.value = b.dataset.v; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  const old = b.textContent; b.textContent = 'kopiert ✓'; setTimeout(() => b.textContent = old, 1200);
+}));
+</script>
+{% endblock %}
