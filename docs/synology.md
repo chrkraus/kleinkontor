@@ -41,7 +41,7 @@ Den Ordner `data` **selbst in der File Station anlegen**. Kleinkontor arbeitet s
 ```yaml
 services:
   kleinkontor:
-    image: ghcr.io/chrkraus/kleinkontor:latest
+    image: ghcr.io/ck-networks/kleinkontor:latest
     container_name: kleinkontor
     ports:
       - "8085:5000"            # DSM belegt selbst 5000/5001 – deshalb 8085
@@ -78,7 +78,7 @@ Für den Alltag im Heimnetz reicht das. Ohne HTTPS laufen Passwörter allerdings
 
 1. In Kleinkontor **Einstellungen → Datensicherung → Jetzt sichern**.
 2. **Container Manager → Projekt → kleinkontor → Aktion → Stoppen**, danach **Aktion → Erstellen** (lädt das neueste Image und startet neu).
-3. Neue Versionen und Änderungen stehen auf der [Release-Seite](https://github.com/chrkraus/kleinkontor/releases).
+3. Neue Versionen und Änderungen stehen auf der [Release-Seite](https://github.com/ck-networks/kleinkontor/releases).
 
 Auch nach jeder Änderung an der Projektdatei gilt: **Stoppen** und **Erstellen** – erst dann wird sie übernommen.
 
@@ -93,7 +93,7 @@ Damit ist Kleinkontor im Heimnetz nur noch verschlüsselt erreichbar.
    ```yaml
    services:
      kleinkontor:
-       image: ghcr.io/chrkraus/kleinkontor:latest
+       image: ghcr.io/ck-networks/kleinkontor:latest
        container_name: kleinkontor
        ports:
          - "127.0.0.1:8085:5000"  # nur noch für DSM selbst erreichbar
@@ -161,4 +161,4 @@ Im **Container Manager → Container → kleinkontor → Protokoll** steht beim 
 | „Netzwerk-Subnetz überschneidet sich“ | Anderes freies Subnetz wählen, z. B. `172.31.0.0/24` mit Gateway `172.31.0.1` |
 | Login klappt über HTTPS nicht dauerhaft | Benutzerdefinierte Kopfzeilen im Reverse Proxy prüfen; `BUCHHALTUNG_TRUSTED_PROXIES` muss zum Gateway des Netzes passen |
 | Änderung an der Projektdatei wirkt nicht | Projekt **Stoppen** und **Erstellen** |
-| Image lässt sich nicht laden | Internetverbindung der NAS prüfen; das Image heißt `ghcr.io/chrkraus/kleinkontor:latest` |
+| Image lässt sich nicht laden | Internetverbindung der NAS prüfen; das Image heißt `ghcr.io/ck-networks/kleinkontor:latest` (bis Version 1.0.2: `ghcr.io/chrkraus/kleinkontor`) |

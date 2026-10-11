@@ -1,7 +1,7 @@
 # Schnellstart: docker compose up -d  →  http://localhost:5000
 services:
   kleinkontor:
-    image: ghcr.io/chrkraus/kleinkontor:latest
+    image: ghcr.io/ck-networks/kleinkontor:latest
     # build: .              # stattdessen selbst bauen
     container_name: kleinkontor
     ports:

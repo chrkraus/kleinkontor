@@ -1,5 +1,7 @@
 # Kleinkontor
 
+[![Kaffee spendieren](https://img.shields.io/badge/Kaffee%20spendieren-FFDD00?style=flat&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/christiankraus)
+
 **Buchhaltung für Kleinunternehmer** – schlanke, selbst gehostete Buchhaltung für **Selbständige und Kleinunternehmer in Deutschland**: Angebote, Rechnungen mit **E-Rechnung (ZUGFeRD)**, Einnahmen und Ausgaben, **Einnahmen-Überschuss-Rechnung** mit Ausfüllhilfe für die Anlage EÜR – als Web-App im eigenen Netz, ohne Cloud-Zwang.
 
 > **Haftungsausschluss:** Dieses Programm ist eine Arbeitshilfe und **ersetzt keine Steuerberatung**. Es wird ohne jede Gewährleistung bereitgestellt (siehe [LICENSE](LICENSE), Abschnitte 15 und 16). Für die Richtigkeit von Rechnungen, Buchungen, Steuerangaben und die Einhaltung der GoBD bist du selbst verantwortlich. Steuerliche Regeln (z. B. Zeilen der Anlage EÜR, Umsatzgrenzen) ändern sich regelmäßig – prüfe die Werte vor der Abgabe.
@@ -30,10 +32,10 @@
 
 ## Schnellstart mit Docker
 
-Fertiges Image: `ghcr.io/chrkraus/kleinkontor` (für amd64 und arm64).
+Fertiges Image: `ghcr.io/ck-networks/kleinkontor` (für amd64 und arm64).
 
 ```bash
-git clone https://github.com/chrkraus/kleinkontor.git
+git clone https://github.com/ck-networks/kleinkontor.git
 cd kleinkontor
 docker compose up -d
 ```
@@ -45,7 +47,7 @@ Dann <http://localhost:5000> öffnen. **Auf einer Synology-NAS:** siehe [Anleitu
 Voraussetzungen: Python 3.11 oder neuer.
 
 ```bash
-git clone https://github.com/chrkraus/kleinkontor.git
+git clone https://github.com/ck-networks/kleinkontor.git
 cd kleinkontor
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -102,6 +104,12 @@ Fast alles stellst du in der App unter **Einstellungen** ein (Firma, Steuer, Num
 Technik: Python, Flask, SQLAlchemy/SQLite, fpdf2 (PDF), drafthorse (ZUGFeRD), waitress. Geldbeträge werden als ganze Cent gespeichert. Hinweise zur Architektur und zu den fachlichen Regeln: [`docs/ENTWICKLUNG.md`](docs/ENTWICKLUNG.md). E-Rechnungen sollten nach Änderungen zusätzlich mit den offiziellen EN-16931-Regeln bzw. dem Mustang-Validator geprüft werden.
 
 Beiträge sind willkommen – bitte vorher ein Issue eröffnen. Sicherheitslücken bitte vertraulich melden, siehe [SECURITY.md](SECURITY.md).
+
+## Unterstützen
+
+Kleinkontor ist kostenlos und bleibt es. Wenn es dir Zeit oder Nerven spart, freue ich mich über einen Kaffee – damit kann ich neue Funktionen umsetzen und die jährlichen Änderungen der Anlage EÜR einpflegen.
+
+[![Spendier mir einen Kaffee](https://img.shields.io/badge/Spendier%20mir%20einen%20Kaffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/christiankraus)
 
 ## Änderungen
 
