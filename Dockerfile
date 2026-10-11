@@ -9,7 +9,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Zeitzonendaten: ohne sie ignoriert Python TZ=Europe/Berlin und rechnet in UTC
 RUN apt-get update \
- && apt-get install -y --no-install-recommends tzdata \
+ && apt-get install -y --no-install-recommends tzdata util-linux \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -18,8 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 RUN useradd --create-home --uid 1000 buchhaltung \
- && mkdir -p /data && chown buchhaltung:buchhaltung /data
-USER buchhaltung
+ && mkdir -p /data && chown buchhaltung:buchhaltung /data \
+ && chmod 755 /app/docker-entrypoint.sh && command -v setpriv
+# Startet als root, wechselt im Entrypoint sofort auf den Besitzer von /data (siehe dort)
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 
 VOLUME ["/data"]
 EXPOSE 5000

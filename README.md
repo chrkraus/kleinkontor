@@ -30,7 +30,7 @@ cd kleinkontor
 docker compose up -d
 ```
 
-Dann <http://localhost:5000> öffnen. **Auf einer Synology-NAS:** siehe [Anleitung für Synology](docs/synology.md). Beim ersten Aufruf legst du das **Admin-Konto** an, danach unter **Einstellungen** Firmendaten, Steuernummer und Bankverbindung. Alle Daten liegen im Ordner `./data` – diesen Ordner unbedingt sichern.
+Dann <http://localhost:5000> öffnen. **Auf einer Synology-NAS:** siehe [Anleitung für Synology](docs/synology.md). Beim ersten Aufruf legst du das **Admin-Konto** an, danach unter **Einstellungen** Firmendaten, Steuernummer und Bankverbindung. Alle Daten liegen im Ordner `./data` – diesen Ordner unbedingt sichern. Der Container läuft nicht als root, sondern als Besitzer von `./data` (gehört der Ordner root, als uid 1000); mit `PUID`/`PGID` lässt sich der Benutzer festlegen.
 
 ## Installation ohne Docker (Linux)
 

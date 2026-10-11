@@ -25,6 +25,7 @@ Mails gehen an `BUCHHALTUNG_TEST_MAIL` (`mailer.send`), Paperless-Uploads sind g
 - `mailer.py`: SMTP, Vorlagen mit Platzhaltern (`format_map` + `_Keep`), BCC nur im Envelope, Versandprotokoll `EmailLog`.
 - `backup.py`: SQLite-Online-Backup als ZIP mit `integrity_check` und Rotation; `nas_sync.sh` verschlüsselt (openssl AES-256, PBKDF2) und spiegelt per rsync nur nach `NAS_TARGET` (aus `instance.env`).
 - `scheduler.py`: Hintergrundjobs nur mit `BUCHHALTUNG_SCHEDULER=1` (setzt `run.sh`), nie im Testmodus.
+- Docker: `docker-entrypoint.sh` startet als root und wechselt per `setpriv` auf den Besitzer von `/data` (bzw. `PUID`/`PGID`, root-Ordner → 1000); mit `user:` läuft er direkt.
 - Mehrzeilige Formularfelder: `\r\n` beim Speichern zu `\n` normalisieren.
 
 ## Fachliche Regeln (nicht aufweichen)

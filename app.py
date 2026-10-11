@@ -60,8 +60,26 @@ def migrate_columns():
                 conn.execute(text(ddl))
 
 
+def _check_data_dir():
+    """Bricht mit verständlicher Meldung ab, wenn der Datenordner nicht beschreibbar ist."""
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        probe = os.path.join(DATA_DIR, ".schreibtest")
+        with open(probe, "w") as f:
+            f.write("ok")
+        os.remove(probe)
+    except OSError as e:
+        uid = os.getuid() if hasattr(os, "getuid") else "?"
+        gid = os.getgid() if hasattr(os, "getgid") else "?"
+        raise SystemExit(
+            f"FEHLER: Datenordner {DATA_DIR} ist nicht beschreibbar ({e.strerror}).\n"
+            f"Der Prozess läuft als uid={uid} gid={gid}. Bitte prüfen, ob dieser Benutzer "
+            f"Schreibrechte auf den Ordner hat (Docker: Angabe 'user:' und Ordnerrechte)."
+        )
+
+
 def create_app():
-    os.makedirs(DATA_DIR, exist_ok=True)
+    _check_data_dir()
     app = Flask(__name__)
     key_file = os.path.join(DATA_DIR, "secret_key")
     if not os.path.exists(key_file):

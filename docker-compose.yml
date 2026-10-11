@@ -10,6 +10,9 @@ services:
       - ./data:/data          # Datenbank, Sicherungen, Logo – unbedingt mitsichern
     environment:
       TZ: Europe/Berlin
+      # Benutzer festlegen (sonst Besitzer von ./data):
+      # PUID: "1000"
+      # PGID: "1000"
       # Reverse-Proxy im selben Docker-Netz, dessen Header übernommen werden sollen:
       # BUCHHALTUNG_TRUSTED_PROXIES: 172.18.0.2
     restart: unless-stopped

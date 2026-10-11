@@ -2,9 +2,11 @@ name: Container-Image
 
 # Baut das Image bei jeder Versionsmarkierung (z. B. v1.0.0) und auf Wunsch manuell.
 # Ergebnis: ghcr.io/<besitzer>/<repository>:<version> und :latest für amd64 und arm64.
+# Ein Push auf den Zweig "test" erzeugt nur :test (Vorabversion zum Ausprobieren).
 on:
   push:
     tags: ["v*"]
+    branches: ["test"]
   workflow_dispatch:
 
 permissions:
@@ -38,7 +40,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=ref,event=branch
       - uses: docker/build-push-action@v6
         with:
           context: .
