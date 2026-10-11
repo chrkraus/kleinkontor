@@ -20,6 +20,14 @@
 - **Datensicherung** täglich mit Rotation; optional verschlüsselte Kopie auf ein NAS
 - Oberfläche auf Deutsch, Hell-/Dunkelmodus, für Handy und Desktop
 
+## So sieht es aus
+
+| Übersicht | Rechnung bearbeiten | Rechnung als PDF |
+|---|---|---|
+| [![Übersicht mit Kennzahlen, offenen Rechnungen und Umsatzgrenzen](docs/screenshots/uebersicht.png)](docs/screenshots/uebersicht.png) | [![Rechnung mit Positionen, Leistungsdatum und Skonto bearbeiten](docs/screenshots/rechnung-bearbeiten.png)](docs/screenshots/rechnung-bearbeiten.png) | [![Fertige Rechnung als PDF (ZUGFeRD)](docs/screenshots/rechnung-pdf.png)](docs/screenshots/rechnung-pdf.png) |
+
+<sub>Alle Namen und Daten in den Bildern sind frei erfunden.</sub>
+
 ## Schnellstart mit Docker
 
 Fertiges Image: `ghcr.io/chrkraus/kleinkontor` (für amd64 und arm64).

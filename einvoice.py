@@ -290,7 +290,7 @@ def build_invoice_pdf(doc, settings):
         "title": f"{doc.kind_label} {doc.number}",
         "subject": f"{doc.kind_label} {doc.number} vom {doc.issue_date.strftime('%d.%m.%Y')} – {seller}",
         "keywords": f"{doc.kind_label}, ZUGFeRD, Factur-X",
-        "creator": "Buchhaltung",
-        "producer": "Buchhaltung",
+        "creator": "Kleinkontor",
+        "producer": "Kleinkontor",
     }
     return attach_xml(pdf, xml, level=PROFILE, metadata=meta, lang="de-DE"), True

@@ -126,6 +126,7 @@ table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); font-weight: 600; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--accent-soft); }
 tfoot td { font-weight: 700; border-bottom: none; }
@@ -176,7 +177,7 @@ input[type=checkbox], input[type=radio] { width: auto; }
 .items input, .items textarea { padding: 6px 8px; }
 .items textarea { min-height: 38px; }
 .items .w-qty { width: 80px; }
-.items .w-unit { width: 80px; }
+.items .w-unit { width: 96px; }
 .items .w-price { width: 110px; }
 .items .w-vat { width: 80px; }
 .items .w-total { width: 110px; }

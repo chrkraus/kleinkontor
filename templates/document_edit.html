@@ -25,9 +25,9 @@
       <div class="field"><label>Leistungsdatum / -zeitraum</label><input name="service_date" value="{{ d.service_date or '' }}" placeholder="z. B. 01.09.–30.09.2026"></div>
       <div class="field"><label>Zahlbar bis</label><input type="date" name="due_date" value="{{ d.due_date.isoformat() if d.due_date }}"></div>
       <div class="field"><label class="check" style="margin-bottom:6px"><input type="checkbox" name="skonto_on" value="1" id="skonto_on" {{ 'checked' if d.skonto_percent and d.skonto_days }}> Skonto</label>
-        <div class="actions" id="skonto_fields" style="flex-wrap:nowrap">
+        <div class="actions" id="skonto_fields" style="row-gap:4px">
           <input name="skonto_percent" value="{{ ('%.2f'|format(d.skonto_percent|float)).rstrip('0').rstrip('.').replace('.', ',') if d.skonto_percent else ('%.2f'|format(settings.skonto_percent|float)).rstrip('0').rstrip('.').replace('.', ',') }}" inputmode="decimal" style="width:70px"> <span>%</span>
-          <span>bei Zahlung in</span>
+          <span class="nowrap">bei Zahlung in</span>
           <input type="number" name="skonto_days" value="{{ d.skonto_days or settings.skonto_days }}" min="1" style="width:70px"> <span>Tagen</span>
         </div></div>
       {% else %}

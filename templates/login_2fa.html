@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ '[TEST] ' if is_test }}Bestätigungscode · {{ settings.company_name or "Buchhaltung" }}</title>
+  <title>{{ '[TEST] ' if is_test }}Bestätigungscode · {{ settings.company_name or "Kleinkontor" }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" crossorigin="use-credentials">
   <link rel="icon" type="image/png" href="{{ url_for('app_icon', size=192) }}">
@@ -14,7 +14,7 @@
 {% if is_test %}<div class="test-banner">⚠ TESTUMGEBUNG – Kopie der Daten · E-Mails gehen nur an dich · Paperless nur lesend</div>{% endif %}
 <main style="max-width:400px;margin:10vh auto;padding:16px">
   <div class="card">
-    <h1 style="margin-bottom:6px">Buchhaltung</h1>
+    <h1 style="margin-bottom:6px">Kleinkontor</h1>
     <p class="muted" style="margin-top:0">{{ settings.company_name or settings.owner_name }}</p>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}

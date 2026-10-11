@@ -3,24 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ '[TEST] ' if is_test }}{% block title %}Buchhaltung{% endblock %} · {{ settings.company_name or "Buchhaltung" }}</title>
+  <title>{{ '[TEST] ' if is_test }}{% block title %}Kleinkontor{% endblock %} · {{ settings.company_name or "Kleinkontor" }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" crossorigin="use-credentials">
   <link rel="icon" type="image/png" href="{{ url_for('app_icon', size=192) }}">
   <link rel="apple-touch-icon" href="{{ url_for('app_icon', size=180) }}">
   <meta name="theme-color" content="#28466e">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Buchhaltung">
+  <meta name="apple-mobile-web-app-title" content="Kleinkontor">
 </head>
 <body>
 {% if is_test %}<div class="test-banner">⚠ TESTUMGEBUNG – Kopie der Daten · E-Mails gehen nur an dich · Paperless nur lesend</div>{% endif %}
 <div class="layout">
   <div class="topbar">
-    <a class="topbar-brand" href="{{ url_for('dashboard') }}"><img src="{{ url_for('app_icon', size=192) }}" alt=""> Buchhaltung</a>
+    <a class="topbar-brand" href="{{ url_for('dashboard') }}"><img src="{{ url_for('app_icon', size=192) }}" alt=""> Kleinkontor</a>
     <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="sidebar">☰ Menü{% if inbox_count or overdue_count %} <span class="dot"></span>{% endif %}</button>
   </div>
   <nav class="sidebar" id="sidebar">
-    <div class="brand">Buchhaltung<small>{{ settings.company_name or settings.owner_name or "Meine Firma" }}</small></div>
+    <div class="brand">Kleinkontor<small>{{ settings.company_name or settings.owner_name or "Meine Firma" }}</small></div>
     {% set ep = request.endpoint %}
     <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}">Übersicht</a>
     {% if can('documents_view') %}

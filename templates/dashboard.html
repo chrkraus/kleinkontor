@@ -74,7 +74,7 @@
       <tbody>
       {% for d in open_invoices %}
         <tr data-href="{{ url_for('document_view', did=d.id) }}">
-          <td>{{ d.number }}</td><td>{{ d.customer.display_name }}</td>
+          <td class="nowrap">{{ d.number }}</td><td>{{ d.customer.display_name }}</td>
           <td>{{ d.due_date|date }} {% if d.overdue %}<span class="badge overdue">überfällig</span>{% endif %}</td>
           <td class="num">{{ d.gross|money }}</td>
         </tr>
@@ -91,7 +91,7 @@
       <tbody>
       {% for d in open_offers %}
         <tr data-href="{{ url_for('document_view', did=d.id) }}">
-          <td>{{ d.number }}</td><td>{{ d.customer.display_name }}</td><td>{{ d.due_date|date }}</td>
+          <td class="nowrap">{{ d.number }}</td><td>{{ d.customer.display_name }}</td><td>{{ d.due_date|date }}</td>
           <td class="num">{{ d.gross|money }}</td>
         </tr>
       {% endfor %}
